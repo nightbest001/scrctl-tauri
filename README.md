@@ -1,82 +1,117 @@
-# Orbit (Tauri + Rust)
+# Orbit
 
-Control panel mirroring & kontrol layar Android lewat adb. Ini port dari versi Electron ke
-**Tauri v2** — backend ditulis ulang di **Rust** (`src-tauri/src/main.rs`), UI lama dipakai lagi
-lewat shim (`renderer/tauri-shim.js` menerjemahkan `window.api.*` ke `invoke/listen` Tauri).
+Aplikasi desktop Windows untuk mirroring dan mengontrol HP Android dari PC, dengan app pendamping
+(**Orbit Link**) untuk notifikasi, pesan, telepon, foto, kamera, dan transfer file lewat WiFi.
 
-## Build .exe lewat GitHub Actions (disarankan)
+Mirroring layar memakai [scrcpy](https://github.com/Genymobile/scrcpy) lewat adb. Aplikasi dibangun dengan
+Tauri v2: backend ditulis dengan Rust, antarmuka dengan HTML/CSS/JS.
 
-1. Push folder ini ke repo GitHub (branch `main`).
-2. Tab **Actions → Build Windows** jalan otomatis (atau klik *Run workflow*).
-3. Selesai → buka run-nya → **Artifacts → Orbit-windows**:
-   - `Orbit-portable.zip` — ekstrak, jalankan `Orbit.exe` (adb sudah ikut di folder `platform-tools`)
-   - `Orbit_..._x64-setup.exe` — installer
-4. Mau rilis? Buat tag: `git tag v0.3.0 && git push --tags` → file otomatis masuk GitHub Releases.
+## Fitur
 
-Kalau step **Build** merah, buka lognya dan kirim error-nya — itu bagian `cargo` yang compile kode Rust.
+**Mirroring dan kontrol (adb + scrcpy)**
+- Mirror layar dengan audio, kontrol mouse dan keyboard, dan input HID (UHID).
+- Sinkronisasi clipboard, serta drag and drop file ke jendela mirror.
+- Mengelola beberapa perangkat, termasuk koneksi nirkabel.
+- Kontrol cepat Wi-Fi, Bluetooth, dan hotspot lewat adb.
 
-## Build di Windows sendiri
+**Orbit Link (tanpa kabel dan tanpa adb)**
+- Notifikasi HP tampil di PC.
+- Clipboard dua arah dan kirim file HP ↔ PC.
+- Status baterai, dan kontrol cepat: senter, volume, mute, Jangan Ganggu, cari HP.
+- Pesan (baca, balas, kirim ke nomor baru) dan telepon (riwayat, panggil, jawab, tolak, akhiri).
+- Galeri foto dengan unduhan file asli, dan pembuka daftar aplikasi HP.
+- Kamera HP sebagai sumber video di PC.
+- Kartu musik di Beranda untuk HP dan PC (Windows SMTC).
+- Deck: tombol pintas untuk media key, URL, aplikasi, dan perintah HP.
 
-Butuh: Node 18+, Rust (rustup), Microsoft C++ Build Tools, WebView2 (sudah ada di Win 10/11).
+Belum didukung: MMS, suara panggilan di PC, dan enkripsi data Link.
+
+## Unduh
+
+Build terbaru ada di halaman [Releases](https://github.com/nightbest001/scrctl-tauri/releases).
+
+| Berkas | Isi |
+| --- | --- |
+| `Orbit-portable.zip` | Versi portabel. Ekstrak lalu jalankan `Orbit.exe`. adb sudah disertakan. |
+| `Orbit_<versi>_x64-setup.exe` | Installer Windows. |
+| `Orbit-Link-v<versi>.apk` | App Android pendamping. |
+
+## Memulai
+
+1. Jalankan Orbit di PC.
+2. Untuk mirroring, aktifkan USB debugging di HP lalu ikuti menu **Setup**.
+3. Untuk Orbit Link, pasang APK di HP, buka menu **Link HP** di Orbit, lalu isi alamat dan kode yang tampil di app HP.
+4. Di app Link, buka bagian **Izin** dan aktifkan akses yang dibutuhkan. Setiap fitur sensitif (kamera, pesan, telepon, foto) punya toggle sendiri yang bisa dimatikan kapan saja.
+
+Persyaratan: Windows 10/11 dengan WebView2 untuk PC, Android 8.0 (API 26) atau lebih baru untuk app Link.
+
+> **Keamanan.** Kode pairing tidak dikirim lewat jaringan (handshake HMAC-SHA256), tetapi isi data Link
+> belum dienkripsi. Gunakan hanya di jaringan WiFi yang dipercaya. Windows dapat meminta izin firewall
+> saat pertama kali dijalankan (port TCP 5588).
+
+Android 13+ dapat memblokir dialog izin untuk app yang dipasang dari luar Play Store. Jika itu terjadi,
+buka Info app → ⋮ → **Izinkan setelan terbatas**, lalu ulangi. APK ditandatangani dengan debug key,
+sehingga Play Protect mungkin meminta konfirmasi saat pemasangan.
+
+## Build dari source
+
+Prasyarat: Node.js 18+, Rust (rustup), Microsoft C++ Build Tools, WebView2.
 
 ```powershell
 # opsional: taruh adb.exe, AdbWinApi.dll, AdbWinUsbApi.dll di src-tauri/resources/platform-tools
 npm install
-npm run dev      # jalan mode dev
-npm run build    # hasil: src-tauri/target/release/scrctl.exe + installer di bundle/nsis
+npm run dev      # mode pengembangan
+npm run build    # src-tauri/target/release/scrctl.exe + installer di bundle/nsis
 ```
 
-Kalau `platform-tools` kosong, app memakai `adb` dari PATH.
+Jika `platform-tools` kosong, aplikasi memakai `adb` dari `PATH`.
 
-## Orbit Link (app Android pendamping)
+Untuk app Android, buka folder `android/` dengan Android Studio, atau jalankan
+`gradle assembleRelease` (JDK 17).
 
-App kecil di `android/` (Kotlin + Jetpack Compose) yang tersambung ke Orbit lewat WiFi,
-tanpa kabel dan tanpa adb. Server-nya ada di `src-tauri/src/link.rs` (port TCP 5588).
+### CI
 
-Fitur:
-- **Notifikasi HP → PC** (muncul di halaman Notifikasi). Butuh izin "Akses notifikasi" di HP.
-- **Clipboard dua arah**. PC → HP otomatis. HP → PC lewat tombol "Kirim clipboard" atau menu Bagikan,
-  karena Android 10+ melarang app background membaca clipboard.
-- **Kirim file** HP ↔ PC. File dari HP masuk ke `Downloads\Orbit`, file dari PC masuk ke `Download/Orbit` di HP.
-- **Baterai HP** live, plus kontrol cepat dari PC: senter, volume, mute, Jangan Ganggu, cari HP.
+| Workflow | Hasil |
+| --- | --- |
+| `.github/workflows/build-windows.yml` | Installer dan zip portabel |
+| `.github/workflows/build-apk.yml` | `Orbit-Link-v<versi>.apk` |
 
-Cara pakai: buka menu **Link HP** di Orbit, install APK di HP, isi alamat dan kode yang tampil.
+Keduanya berjalan pada push ke `main` dan pada tag `v*`. Tag melampirkan hasil build ke Releases dan
+menetapkan versi aplikasi:
 
-Keamanan: kode tidak dikirim lewat jaringan (handshake HMAC-SHA256), tapi isi data **belum dienkripsi**.
-Pakai di WiFi yang kamu percaya. Windows bisa minta izin firewall saat pertama jalan.
+```bash
+git tag v0.6.7
+git push --tags
+```
 
-### Build APK lewat GitHub Actions
+Tanpa tag, versi diambil dari `src-tauri/tauri.conf.json`. App Link memeriksa pembaruan dari Releases.
 
-Push ke GitHub, tab **Actions → Build Android APK** (atau *Run workflow*), lalu ambil
-**Artifacts → Orbit-Link** (`Orbit-Link.apk`). Tag `v*` otomatis melampirkan APK ke Releases.
-APK ditandatangani debug key, jadi bisa langsung di-install; Play Protect mungkin menanyakan konfirmasi.
+## Struktur proyek
 
-### Fitur tambahan (terinspirasi NectarLink)
+```
+src-tauri/
+  src/main.rs      Backend: adb, klien scrcpy (video/audio/kontrol), UHID, clipboard, setelan, window
+  src/link.rs      Server Orbit Link (HP ↔ PC)
+  src/pcmedia.rs   Media PC lewat Windows SMTC
+  src/phone.rs     Kontrol HP lewat adb (Wi-Fi, Bluetooth, hotspot, buka app) dan Deck
+  resources/       scrcpy-server.jar dan platform-tools
+renderer/          Antarmuka (HTML/CSS/JS); tauri-shim.js menjembatani window.api ke Rust
+android/           App Android Orbit Link (Kotlin, Jetpack Compose)
+.github/workflows/ Build otomatis
+```
 
-Semua lewat koneksi Link yang sama (protokol JSON, lihat `android/.../Features.kt` dan `src-tauri/src/link.rs`):
+Protokol Link berbasis JSON lewat TCP. Penanganan pesan di sisi HP ada di
+`android/app/src/main/kotlin/app/scrctl/link/Features.kt`.
 
-- **Kartu musik** di Beranda: musik di HP (sesi media Android, butuh Akses notifikasi) dan di PC (Windows SMTC,
-  `src-tauri/src/pcmedia.rs`) — judul, artis, cover (HP), seek, play/pause/next/prev. Kalau dua-duanya ada, pilih PC/HP.
-- **Wi-Fi / Bluetooth / Hotspot** di Kontrol HP: dijalankan lewat adb (`svc wifi|bluetooth`, `cmd connectivity start-tethering`),
-  jadi butuh HP terhubung via adb (menu Setup). Status Wi-Fi/BT dibaca app Link; status hotspot hanya diketahui kalau Android mengizinkan.
-- **Pesan** (SMS, baca + balas + nomor baru), **Telepon** (riwayat, telepon dari PC, jawab/tolak/akhiri, panggilan masuk),
-  **Foto** (thumbnail + unduh file asli ke Downloads\Orbit), **Apps** (daftar app + buka di HP lewat adb), **Deck** (tombol pintas:
-  media key PC, buka URL/app, perintah HP). Izin HP: app Link → Izin → "Pesan, kontak, telepon, foto".
-- Belum ada: MMS, suara panggilan di PC, window app terpisah, enkripsi data Link.
+## Catatan teknis
 
-## Struktur
+- Video dan audio dikirim ke jendela mirror lewat `Channel` Tauri sebagai byte mentah, lalu didekode
+  dengan WebCodecs di WebView2.
+- Notifikasi desktop memakai notifikasi native Windows.
+- Data (daftar perangkat dan setelan) disimpan di `%APPDATA%\com.scrctl.app\`.
 
-- `src-tauri/src/main.rs` — semua backend: adb, client scrcpy (video/audio/control), UHID, clipboard, notifikasi HP, setelan, window.
-- `src-tauri/resources/scrcpy-server.jar` — server resmi scrcpy v4.1 (Apache 2.0), di-embed ke exe.
-- `renderer/` — UI (HTML/CSS/JS). `tauri-shim.js` = jembatan ke Rust.
-- `src-tauri/src/link.rs` — server Orbit Link (HP ↔ PC).
-- `android/` — app Android Orbit Link.
-- `.github/workflows/build-windows.yml`, `build-apk.yml` — build otomatis.
+## Lisensi dan atribusi
 
-## Beda dengan versi Electron
-
-- Stream video/audio dikirim ke window mirror lewat `Channel` Tauri (byte mentah), decode tetap WebCodecs di WebView2.
-- Notifikasi desktop pakai notifikasi native Windows.
-- Drag & drop file ke window mirror ditangani di Rust (event window), bukan HTML5 drop.
-- Data (daftar device, setelan) disimpan di `%APPDATA%\com.scrctl.app\`. Data lama Electron tidak otomatis pindah.
-- Lisensi: scrcpy-server Apache 2.0 (lihat `LICENSE-scrcpy.txt`).
+`scrcpy-server.jar` adalah server resmi scrcpy v4.1 milik Genymobile, berlisensi Apache 2.0
+(lihat `src-tauri/resources/LICENSE-scrcpy.txt`). Font Montserrat berlisensi SIL OFL
+(lihat `renderer/fonts/LICENSE-montserrat.txt`).

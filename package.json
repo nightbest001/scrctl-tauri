@@ -1,6 +1,6 @@
 {
   "name": "scrctl",
-  "version": "0.5.0",
+  "version": "0.6.7",
   "private": true,
   "description": "Orbit - control panel scrcpy buatan sendiri (Tauri + Rust)",
   "scripts": {

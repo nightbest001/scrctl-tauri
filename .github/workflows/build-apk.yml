@@ -29,28 +29,33 @@ jobs:
           gradle-version: 8.9
 
       # Tag v0.6.1 -> versionName 0.6.1, versionCode 601 (dipakai cek update di app HP)
-      - name: Build APK (release)
-        working-directory: android
+      # Tanpa tag: versi diambil dari src-tauri/tauri.conf.json
+      - name: Tentukan versi
         run: |
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
             V="${GITHUB_REF_NAME#v}"
-            IFS=. read -r MA MI PA <<< "$V"
-            CODE=$(( ${MA:-0} * 10000 + ${MI:-0} * 100 + ${PA:-0} ))
-            gradle --no-daemon assembleRelease -PappVersion="$V" -PappCode="$CODE"
           else
-            gradle --no-daemon assembleRelease
+            V=$(grep -m1 '"version"' src-tauri/tauri.conf.json | sed -E 's/.*"version": *"([^"]+)".*/\1/')
           fi
+          echo "APP_VERSION=$V" >> "$GITHUB_ENV"
+
+      - name: Build APK (release)
+        working-directory: android
+        run: |
+          IFS=. read -r MA MI PA <<< "$APP_VERSION"
+          CODE=$(( ${MA:-0} * 10000 + ${MI:-0} * 100 + ${PA:-0} ))
+          gradle --no-daemon assembleRelease -PappVersion="$APP_VERSION" -PappCode="$CODE"
 
       - name: Rename
-        run: cp android/app/build/outputs/apk/release/app-release.apk Orbit-Link.apk
+        run: cp android/app/build/outputs/apk/release/app-release.apk "Orbit-Link-v${APP_VERSION}.apk"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Orbit-Link
-          path: Orbit-Link.apk
+          name: Orbit-Link-v${{ env.APP_VERSION }}
+          path: Orbit-Link-v${{ env.APP_VERSION }}.apk
 
       - name: Attach to GitHub Release (tag v*)
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: Orbit-Link.apk
+          files: Orbit-Link-v${{ env.APP_VERSION }}.apk
