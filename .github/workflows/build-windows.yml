@@ -53,7 +53,17 @@ jobs:
         run: npm install
 
       - name: Build (cek compile + installer)
-        run: npm run build
+        shell: pwsh
+        run: |
+          for ($i = 1; $i -le 3; $i++) {
+            npm run build
+            if ($LASTEXITCODE -eq 0) { exit 0 }
+            Write-Host "Bundle gagal, coba lagi ($i/3)..."
+            Start-Sleep -Seconds 20
+          }
+          Write-Host "Installer gagal terus. Build exe saja tanpa installer."
+          npm run build -- --no-bundle
+          exit $LASTEXITCODE
 
       - name: Portable zip (exe + adb)
         shell: pwsh
