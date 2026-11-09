@@ -1,5 +1,5 @@
 // =============================================================================
-// SCRCTL — halaman utama (Beranda / Setup / Setelan / Log)
+// Orbit — halaman utama (Beranda / Setup / Setelan / Log)
 // =============================================================================
 const $ = (id) => document.getElementById(id);
 
@@ -105,7 +105,7 @@ $('winClose').addEventListener('click', () => window.api.windowClose());
 // ---------------------------------------------------------------------------
 // Navigasi
 // ---------------------------------------------------------------------------
-const PAGE_TITLES = { home: 'Beranda', notif: 'Notifikasi', sms: 'Pesan', calls: 'Telepon', photos: 'Foto', apps: 'Apps', deck: 'Deck', link: 'Link HP', setup: 'Setup', settings: 'Setelan', log: 'Log' };
+const PAGE_TITLES = { home: 'Beranda', notif: 'Notifikasi', sms: 'Pesan', calls: 'Telepon', photos: 'Foto', camera: 'Kamera', apps: 'Apps', deck: 'Deck', link: 'Link HP', setup: 'Setup', settings: 'Setelan', log: 'Log' };
 
 function showPage(name) {
   currentPage = name;
@@ -732,7 +732,7 @@ function lcProgress(done, total, mbps) {
 }
 
 async function lcStartDownload(rel, asset) {
-  lcState('dl', 'Mengunduh dan memasang', `SCRCTL untuk Windows | ${rel.tag_name}`);
+  lcState('dl', 'Mengunduh dan memasang', `Orbit untuk Windows | ${rel.tag_name}`);
   lcBuildDots();
   lcStat(0, asset.size, 0);
   lcProgress(0, asset.size, 0);
@@ -753,11 +753,11 @@ async function lcStartDownload(rel, asset) {
   try {
     await window.api.downloadUpdate(asset.browser_download_url, asset.size);
     lcProgress(asset.size, asset.size, lcLast.spd);
-    $('lcStat').textContent = 'Membuka installer…';
+    $('lcStat').textContent = 'Memasang update, app buka lagi sendiri…';
     await sleep(700);
     await window.api.installUpdate();
   } catch (e) {
-    lcState('error', 'Update gagal', `SCRCTL untuk Windows | ${rel.tag_name}`);
+    lcState('error', 'Update gagal', `Orbit untuk Windows | ${rel.tag_name}`);
     $('lcFoundH').textContent = 'Download gagal';
     $('lcFoundP').textContent = 'Cek koneksi internet, lalu coba lagi.';
     $('lcGo').textContent = 'Coba lagi';
@@ -771,7 +771,7 @@ async function launchFlow() {
   $('lcSkip').onclick = lcClose;
   let cur = '';
   try { cur = await window.api.getAppVersion(); $('navVer').textContent = 'v' + cur; } catch (e) {}
-  lcState('check', 'Membuka SCRCTL', `SCRCTL untuk Windows | v${cur}`);
+  lcState('check', 'Membuka Orbit', `Orbit untuk Windows | v${cur}`);
   const t0 = Date.now();
   let rel = null;
   try {
@@ -800,7 +800,7 @@ async function launchFlow() {
 }
 
 // ---------------------------------------------------------------------------
-// Link HP (app Android SCRCTL Link): baterai, kontrol cepat, kirim file
+// Link HP (app Android Orbit Link): baterai, kontrol cepat, kirim file
 // ---------------------------------------------------------------------------
 let linkInfo = { connected: false };
 let linkFinding = false;

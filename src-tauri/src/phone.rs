@@ -1,4 +1,4 @@
-// SCRCTL — kontrol HP lewat adb (Wi-Fi, Bluetooth, hotspot, buka app) dan Deck.
+// Orbit — kontrol HP lewat adb (Wi-Fi, Bluetooth, hotspot, buka app) dan Deck.
 //
 // Wi-Fi/Bluetooth/hotspot tidak bisa diubah app Link biasa (Android melarang), tapi adb punya
 // izin shell, jadi tombolnya menjalankan `svc ...` lewat adb ke HP yang sedang dipilih di Beranda.

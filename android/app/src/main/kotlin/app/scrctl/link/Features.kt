@@ -13,6 +13,7 @@ class Features(
     scope: CoroutineScope,
     private val post: (JSONObject) -> Unit,
     sendUri: (Uri) -> Unit,
+    sendFrame: (Int, ByteArray) -> Unit,
 ) {
     private val ctx = ctx.applicationContext
     val media = PhoneMedia(this.ctx, post)
@@ -20,6 +21,7 @@ class Features(
     val calls = PhoneCalls(this.ctx, scope, post)
     val photos = PhonePhotos(this.ctx, scope, post, sendUri)
     val apps = PhoneApps(this.ctx, scope, post)
+    val camera = PhoneCamera(this.ctx, post, sendFrame)
 
     fun onConnected() {
         media.start()
@@ -33,6 +35,7 @@ class Features(
         media.stop()
         sms.stop()
         calls.stop()
+        camera.stop()
     }
 
     /** true = pesan ditangani di sini. */
@@ -43,6 +46,7 @@ class Features(
             "calls" -> calls.handle(o)
             "photos" -> photos.handle(o)
             "apps" -> apps.handle(o)
+            "cam" -> camera.handle(o)
             "caps" -> { sms.start(); calls.start(); pushCaps() }
             else -> return false
         }
@@ -58,6 +62,7 @@ class Features(
                 .put("call", calls.canCall())
                 .put("photos", photos.allowed())
                 .put("contacts", Contacts.has(ctx, Manifest.permission.READ_CONTACTS))
+                .put("camera", camera.allowed())
                 .put("sdk", Build.VERSION.SDK_INT)
         )
     }

@@ -127,7 +127,7 @@ class Commands(private val ctx: Context, private val post: (JSONObject) -> Unit)
 
     private fun setDnd(on: Boolean?) {
         if (!nm.isNotificationPolicyAccessGranted) {
-            err("Izin Jangan Ganggu belum diberikan. Buka app SCRCTL Link di HP, bagian Izin.")
+            err("Izin Jangan Ganggu belum diberikan. Buka app Orbit Link di HP, bagian Izin.")
             return
         }
         val active = nm.currentInterruptionFilter.let {

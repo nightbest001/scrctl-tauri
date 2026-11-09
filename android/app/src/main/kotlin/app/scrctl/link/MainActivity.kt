@@ -40,6 +40,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -57,6 +58,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 private val Bg = Color(0xFF121214)
 private val CardBg = Color(0xFF1F2025)
@@ -69,6 +72,12 @@ class MainActivity : ComponentActivity() {
 
     private val resumeTick = mutableIntStateOf(0)
     private val askNotif = registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
+    private val askCamera = registerForActivityResult(ActivityResultContracts.RequestPermission()) {
+        resumeTick.intValue++
+        // Mulai ulang service supaya tipe foreground "camera" ikut aktif
+        if (Prefs.enabled(this)) ContextCompat.startForegroundService(this, Intent(this, LinkService::class.java))
+        LinkHub.client?.features?.handle(org.json.JSONObject().put("t", "caps"))
+    }
     private val askFeatures = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
         resumeTick.intValue++
         LinkHub.client?.features?.handle(org.json.JSONObject().put("t", "caps"))
@@ -170,6 +179,9 @@ class MainActivity : ComponentActivity() {
         }
         var code by remember { mutableStateOf(Prefs.token(ctx)) }
 
+        var upd by remember { mutableStateOf<Updater.Info?>(null) }
+        LaunchedEffect(Unit) { upd = withContext(Dispatchers.IO) { Updater.check(ctx) } }
+
         val pickFiles = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
             sendFiles(uris)
         }
@@ -181,7 +193,19 @@ class MainActivity : ComponentActivity() {
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text("SCRCTL Link", fontSize = 24.sp, fontWeight = FontWeight.ExtraBold)
+            Text("Orbit Link", fontSize = 24.sp, fontWeight = FontWeight.ExtraBold)
+
+            // --- update ---
+            upd?.let { u ->
+                Panel {
+                    Text("Update tersedia: ${u.tag}", fontWeight = FontWeight.Bold, color = Green)
+                    Text("Versi kamu ${Updater.currentVersion(ctx)}. Unduh APK baru lalu pasang (menimpa yang lama).", fontSize = 12.sp, color = Dim)
+                    Button(modifier = Modifier.fillMaxWidth(), onClick = {
+                        val url = u.apkUrl.ifEmpty { u.pageUrl }
+                        try { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) } catch (e: Exception) { toast("Tidak bisa membuka link") }
+                    }) { Text("Download update") }
+                }
+            }
 
             // --- status ---
             Panel {
@@ -202,7 +226,7 @@ class MainActivity : ComponentActivity() {
             // --- sambungkan ---
             Panel {
                 Text("Sambungkan ke PC", fontWeight = FontWeight.Bold)
-                Text("Buka SCRCTL di PC → menu Link HP. Isi alamat dan kode yang tampil di sana.", fontSize = 12.sp, color = Dim)
+                Text("Buka Orbit di PC → menu Link HP. Isi alamat dan kode yang tampil di sana.", fontSize = 12.sp, color = Dim)
                 OutlinedTextField(
                     value = host, onValueChange = { host = it },
                     label = { Text("Alamat PC (mis. 192.168.1.10)") },
@@ -239,7 +263,7 @@ class MainActivity : ComponentActivity() {
                     Text("Kirim clipboard HP")
                 }
                 Text(
-                    "Atau pakai menu Bagikan → SCRCTL Link dari app mana pun. Clipboard PC → HP tersinkron otomatis. " +
+                    "Atau pakai menu Bagikan → Orbit Link dari app mana pun. Clipboard PC → HP tersinkron otomatis. " +
                         "HP → PC harus ditekan manual: Android melarang app di background membaca clipboard.",
                     fontSize = 12.sp, color = Dim,
                 )
@@ -283,6 +307,8 @@ class MainActivity : ComponentActivity() {
                         fontSize = 12.sp, color = Dim,
                     )
                 }
+                val camOk = ctx.checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+                PermRow("Kamera (buka kamera HP dari PC)", camOk) { askCamera.launch(Manifest.permission.CAMERA) }
                 PermRow("Bebas hemat baterai (koneksi tidak diputus)", battery) {
                     open(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, true)
                 }

@@ -71,6 +71,7 @@
     linkSend: function (msg) { return invoke('link_send', { msg: msg }); },
     linkOpenReceived: function (path) { return invoke('link_open_received', { path: path || null }); },
     onLinkMsg: function (cb) { listen('link-msg', cb); },
+    onLinkCam: function (cb) { listen('link-cam', cb); },
     onLinkFile: function (cb) { listen('link-file', cb); },
     phoneToggle: function (serial, kind, on) { return invoke('phone_toggle', { serial: serial, kind: kind, on: !!on }); },
     phoneOpenApp: function (serial, pkg) { return invoke('phone_open_app', { serial: serial, pkg: pkg }); },

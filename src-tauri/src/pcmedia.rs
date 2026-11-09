@@ -1,4 +1,4 @@
-// SCRCTL — media yang sedang diputar di PC (Spotify, browser, dll) lewat Windows
+// Orbit — media yang sedang diputar di PC (Spotify, browser, dll) lewat Windows
 // System Media Transport Controls (SMTC), untuk kartu musik di Beranda.
 // Event "pc-media": { has, app, title, artist, playing, pos, dur } (pos/dur dalam ms).
 

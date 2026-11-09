@@ -17,7 +17,7 @@ let mouseUhid = false;
 let screenOn = true;
 
 function setTitle(text) {
-  const t = text || 'SCRCTL Mirror';
+  const t = text || 'Orbit Mirror';
   document.title = t;
   tbTitle.textContent = t;
 }

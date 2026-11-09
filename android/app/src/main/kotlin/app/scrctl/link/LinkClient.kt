@@ -25,7 +25,7 @@ import java.net.Socket
 import java.nio.ByteBuffer
 import java.util.concurrent.atomic.AtomicInteger
 
-/** Koneksi ke SCRCTL di PC: handshake HMAC, auto-reconnect, kirim/terima pesan dan file. */
+/** Koneksi ke Orbit di PC: handshake HMAC, auto-reconnect, kirim/terima pesan dan file. */
 class LinkClient(context: Context, private val scope: CoroutineScope) {
 
     private val ctx = context.applicationContext
@@ -38,7 +38,7 @@ class LinkClient(context: Context, private val scope: CoroutineScope) {
 
     private val receiver = FileReceiver(ctx) { text, err -> LinkHub.log(text, err) }
     val commands = Commands(ctx) { post(it) }
-    val features = Features(ctx, scope, { post(it) }, { u -> sendUris(listOf(u)) })
+    val features = Features(ctx, scope, { post(it) }, { u -> sendUris(listOf(u)) }, { k, b -> sendFrame(k, b) })
 
     /** Dipanggil (di thread IO) setiap kali handshake berhasil. */
     var onConnected: (() -> Unit)? = null
@@ -90,7 +90,7 @@ class LinkClient(context: Context, private val scope: CoroutineScope) {
         out = DataOutputStream(BufferedOutputStream(s.getOutputStream()))
 
         val ch = readJson(din)
-        if (ch.optString("t") != "challenge") throw IOException("bukan server SCRCTL")
+        if (ch.optString("t") != "challenge") throw IOException("bukan server Orbit")
         val pc = ch.optString("pc", "PC")
         sendJson(
             JSONObject().put("t", "hello")
@@ -146,6 +146,16 @@ class LinkClient(context: Context, private val scope: CoroutineScope) {
     fun post(o: JSONObject) {
         scope.launch(Dispatchers.IO) {
             try { sendJson(o) } catch (_: Exception) {}
+        }
+    }
+
+    private val frameBusy = java.util.concurrent.atomic.AtomicBoolean(false)
+
+    /** Kirim frame biner (mis. kamera). Kalau frame sebelumnya belum selesai terkirim, frame ini dibuang. */
+    fun sendFrame(kind: Int, body: ByteArray) {
+        if (!frameBusy.compareAndSet(false, true)) return
+        scope.launch(Dispatchers.IO) {
+            try { sendRaw(kind, body) } catch (_: Exception) {} finally { frameBusy.set(false) }
         }
     }
 

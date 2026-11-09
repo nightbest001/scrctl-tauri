@@ -1,4 +1,4 @@
-// SCRCTL Link — server TCP di PC untuk app Android "SCRCTL Link".
+// Orbit Link — server TCP di PC untuk app Android "Orbit Link".
 //
 // Protokol (v1): frame = u32 BE panjang | u8 jenis | isi.
 //   jenis 0 = JSON, jenis 1 = potongan file (4 byte id BE + data).
@@ -37,6 +37,7 @@ const CHUNK: usize = 128 * 1024;
 enum Frame {
     Json(Value),
     Bin(Vec<u8>),
+    Cam(Vec<u8>), // jenis 2: [putaran/90][cermin][JPEG] dari kamera HP
 }
 
 #[derive(Default)]
@@ -150,6 +151,8 @@ async fn read_frame(r: &mut OwnedReadHalf) -> std::io::Result<Frame> {
         let v = serde_json::from_slice::<Value>(&body)
             .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e.to_string()))?;
         Ok(Frame::Json(v))
+    } else if kind == 2 {
+        Ok(Frame::Cam(body))
     } else {
         Ok(Frame::Bin(body))
     }
@@ -165,10 +168,10 @@ async fn write_frame(w: &mut OwnedWriteHalf, f: &Frame) -> std::io::Result<()> {
             out.push(0);
             out.extend_from_slice(&body);
         }
-        Frame::Bin(b) => {
+        Frame::Bin(b) | Frame::Cam(b) => {
             out = Vec::with_capacity(5 + b.len());
             out.extend_from_slice(&((b.len() + 1) as u32).to_be_bytes());
-            out.push(1);
+            out.push(if matches!(f, Frame::Cam(_)) { 2 } else { 1 });
             out.extend_from_slice(b);
         }
     }
@@ -285,11 +288,11 @@ pub async fn serve(app: AppHandle) {
     let listener = match TcpListener::bind(("0.0.0.0", port)).await {
         Ok(l) => l,
         Err(e) => {
-            log(&app, format!("SCRCTL Link: gagal buka port {}: {}", port, e), true);
+            log(&app, format!("Orbit Link: gagal buka port {}: {}", port, e), true);
             return;
         }
     };
-    log(&app, format!("SCRCTL Link siap di port {}", port), false);
+    log(&app, format!("Orbit Link siap di port {}", port), false);
     loop {
         match listener.accept().await {
             Ok((sock, peer)) => {
@@ -330,7 +333,7 @@ async fn handle(app: AppHandle, sock: TcpStream, addr: String) {
     let proof = s(&first, "proof");
     if s(&first, "t") != "hello" || !proof_ok(&token, &nonce, &proof) {
         let _ = write_frame(&mut w, &Frame::Json(json!({ "t": "deny" }))).await;
-        log(&app, format!("SCRCTL Link: {} ditolak (kode salah)", addr), true);
+        log(&app, format!("Orbit Link: {} ditolak (kode salah)", addr), true);
         tokio::time::sleep(Duration::from_secs(1)).await;
         return;
     }
@@ -413,6 +416,7 @@ async fn handle(app: AppHandle, sock: TcpStream, addr: String) {
         match fr {
             Frame::Json(v) => on_json(&app, &name, &mut incoming, v).await,
             Frame::Bin(b) => on_chunk(&mut incoming, b).await,
+            Frame::Cam(b) => on_cam(&app, b),
         }
     }
 
@@ -435,6 +439,16 @@ async fn handle(app: AppHandle, sock: TcpStream, addr: String) {
     }
     emit_state(&app);
     event(&app, format!("HP terputus: {}", name), false);
+}
+
+// Frame kamera: teruskan ke UI sebagai base64 (halaman Kamera menggambarnya ke canvas).
+fn on_cam(app: &AppHandle, b: Vec<u8>) {
+    if b.len() < 3 {
+        return;
+    }
+    use base64::Engine;
+    let jpg = base64::engine::general_purpose::STANDARD.encode(&b[2..]);
+    let _ = app.emit("link-cam", json!({ "rot": b[0], "mirror": b[1], "jpg": jpg }));
 }
 
 async fn on_chunk(inc: &mut HashMap<u32, Incoming>, b: Vec<u8>) {
@@ -505,7 +519,7 @@ async fn on_json(app: &AppHandle, name: &str, inc: &mut HashMap<u32, Incoming>, 
             let size = v.get("size").and_then(|x| x.as_u64()).unwrap_or(0);
             let fname = safe_name(&s(&v, "name"));
             let dir = match app.path().download_dir() {
-                Ok(d) => d.join("SCRCTL"),
+                Ok(d) => d.join("Orbit"),
                 Err(_) => app.state::<AppState>().data_dir.join("received"),
             };
             let _ = tokio::fs::create_dir_all(&dir).await;
@@ -536,7 +550,7 @@ async fn on_json(app: &AppHandle, name: &str, inc: &mut HashMap<u32, Incoming>, 
         }
         // fitur tambahan: musik, SMS, telepon, foto, apps — diolah di renderer/features.js
         "media" | "sms-threads" | "sms-thread" | "sms-sent" | "sms-changed" | "call-log" | "call-state" | "photos"
-        | "apps" | "caps" => {
+        | "apps" | "caps" | "cam-state" => {
             let _ = app.emit("link-msg", v);
         }
         _ => {}
@@ -670,7 +684,7 @@ pub async fn link_send_file(app: AppHandle) -> Value {
 #[tauri::command]
 pub async fn link_send(app: AppHandle, msg: Value) -> bool {
     let t = s(&msg, "t");
-    if !matches!(t.as_str(), "mcmd" | "sms" | "calls" | "photos" | "apps" | "caps") {
+    if !matches!(t.as_str(), "mcmd" | "sms" | "calls" | "photos" | "apps" | "caps" | "cam") {
         return false;
     }
     let tx = app.state::<LinkState>().tx.lock().unwrap().clone();
@@ -682,12 +696,12 @@ pub async fn link_send(app: AppHandle, msg: Value) -> bool {
 
 fn received_dir(app: &AppHandle) -> PathBuf {
     match app.path().download_dir() {
-        Ok(d) => d.join("SCRCTL"),
+        Ok(d) => d.join("Orbit"),
         Err(_) => app.state::<AppState>().data_dir.join("received"),
     }
 }
 
-/// Buka file yang diterima dari HP (hanya yang ada di folder Downloads\SCRCTL) atau folder itu sendiri.
+/// Buka file yang diterima dari HP (hanya yang ada di folder Downloads\Orbit) atau folder itu sendiri.
 #[tauri::command]
 pub fn link_open_received(app: AppHandle, path: Option<String>) -> Result<(), String> {
     let dir = received_dir(&app);

@@ -496,3 +496,12 @@ select option { background:#1f2025; }
 .cb-txt b { font-size:13px; }
 .cb-txt span { font-size:12px; color:var(--text-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .c-act { display:flex; align-items:center; gap:8px; }
+
+/* Kamera HP */
+.cam-stage { position:relative; display:grid; place-items:center; background:#000; border-radius:14px; overflow:hidden; min-height:320px; max-height:calc(100vh - 280px); }
+.cam-stage canvas { max-width:100%; max-height:calc(100vh - 280px); display:none; }
+.cam-stage.live canvas { display:block; }
+.cam-empty { position:absolute; color:var(--text-3); font-size:14px; }
+.cam-stage.live .cam-empty { display:none; }
+.cam-seg { display:flex; gap:8px; margin-top:12px; }
+.cam-seg .btn.active { background:var(--blue); color:#fff; }

@@ -13,7 +13,7 @@ import java.io.IOException
 import java.io.OutputStream
 import java.nio.ByteBuffer
 
-/** Menerima file dari PC. Android 10+: masuk ke Download/SCRCTL lewat MediaStore (tanpa izin storage). */
+/** Menerima file dari PC. Android 10+: masuk ke Download/Orbit lewat MediaStore (tanpa izin storage). */
 class FileReceiver(private val ctx: Context, private val log: (String, Boolean) -> Unit) {
 
     private class Incoming(
@@ -36,7 +36,7 @@ class FileReceiver(private val ctx: Context, private val log: (String, Boolean) 
                 val cv = ContentValues().apply {
                     put(MediaStore.Downloads.DISPLAY_NAME, name)
                     put(MediaStore.Downloads.MIME_TYPE, mime(name))
-                    put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/SCRCTL")
+                    put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/Orbit")
                     put(MediaStore.Downloads.IS_PENDING, 1)
                 }
                 val uri = ctx.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, cv)
@@ -44,7 +44,7 @@ class FileReceiver(private val ctx: Context, private val log: (String, Boolean) 
                 val os = ctx.contentResolver.openOutputStream(uri) ?: throw IOException("tidak bisa menulis")
                 map[id] = Incoming(name, size, os, uri, null)
             } else {
-                val dir = File(ctx.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), "SCRCTL")
+                val dir = File(ctx.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), "Orbit")
                 dir.mkdirs()
                 val f = unique(dir, name)
                 map[id] = Incoming(name, size, FileOutputStream(f), null, f)
@@ -80,7 +80,7 @@ class FileReceiver(private val ctx: Context, private val log: (String, Boolean) 
             if (f.size > 0 && f.got != f.size) {
                 log("File ${f.name} tidak lengkap (${f.got} dari ${f.size} byte)", true)
             } else {
-                log("File diterima: ${f.name} (Download/SCRCTL)", false)
+                log("File diterima: ${f.name} (Download/Orbit)", false)
             }
         } catch (e: Exception) {
             log("Gagal menyelesaikan ${f.name}: ${e.message}", true)

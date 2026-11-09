@@ -44,7 +44,7 @@ class PhoneMedia(private val ctx: Context, private val post: (JSONObject) -> Uni
             if (!warned) {
                 warned = true
                 post(JSONObject().put("t", "event").put("err", true)
-                    .put("text", "Musik HP butuh izin Akses notifikasi di app SCRCTL Link"))
+                    .put("text", "Musik HP butuh izin Akses notifikasi di app Orbit Link"))
             }
         }
     }

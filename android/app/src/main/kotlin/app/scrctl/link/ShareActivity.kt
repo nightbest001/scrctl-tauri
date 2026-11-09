@@ -7,14 +7,14 @@ import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
 
-/** Menu Bagikan dari app mana pun: teks -> clipboard PC, file -> folder Downloads\SCRCTL di PC. */
+/** Menu Bagikan dari app mana pun: teks -> clipboard PC, file -> folder Downloads\Orbit di PC. */
 class ShareActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val client = LinkHub.client
         if (client == null || LinkHub.ui.value.conn != Conn.Connected) {
-            toast("SCRCTL Link belum terhubung ke PC")
+            toast("Orbit Link belum terhubung ke PC")
             finish()
             return
         }

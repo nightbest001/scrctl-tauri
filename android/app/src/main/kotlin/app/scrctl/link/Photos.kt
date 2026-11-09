@@ -45,7 +45,7 @@ class PhonePhotos(
     private fun list(limit: Int) {
         if (!allowed()) {
             post(JSONObject().put("t", "event").put("err", true)
-                .put("text", "Izin foto belum diberikan. Buka app SCRCTL Link di HP, bagian Izin."))
+                .put("text", "Izin foto belum diberikan. Buka app Orbit Link di HP, bagian Izin."))
             post(JSONObject().put("t", "photos").put("list", JSONArray()).put("first", true).put("last", true))
             return
         }

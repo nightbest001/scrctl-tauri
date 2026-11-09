@@ -88,7 +88,7 @@ class LinkService : Service() {
         val nm = getSystemService(NotificationManager::class.java)
         scope.launch {
             LinkHub.ui.collect { st ->
-                nm.notify(NOTIF_ID, buildNotification(st.message.ifEmpty { "SCRCTL Link" }))
+                nm.notify(NOTIF_ID, buildNotification(st.message.ifEmpty { "Orbit Link" }))
             }
         }
     }
@@ -121,7 +121,7 @@ class LinkService : Service() {
         ).build()
         return Notification.Builder(this, CHANNEL)
             .setSmallIcon(android.R.drawable.stat_notify_sync)
-            .setContentTitle("SCRCTL Link")
+            .setContentTitle("Orbit Link")
             .setContentText(text)
             .setContentIntent(open)
             .setOngoing(true)
@@ -131,7 +131,16 @@ class LinkService : Service() {
 
     private fun startFg(n: Notification) {
         if (Build.VERSION.SDK_INT >= 29) {
-            startForeground(NOTIF_ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+            var type = ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+            // Tipe camera supaya kamera tetap jalan saat layar mati / app di background.
+            if (Build.VERSION.SDK_INT >= 30 &&
+                checkSelfPermission(android.Manifest.permission.CAMERA) == android.content.pm.PackageManager.PERMISSION_GRANTED
+            ) type = type or ServiceInfo.FOREGROUND_SERVICE_TYPE_CAMERA
+            try {
+                startForeground(NOTIF_ID, n, type)
+            } catch (e: Exception) {
+                startForeground(NOTIF_ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+            }
         } else {
             startForeground(NOTIF_ID, n)
         }

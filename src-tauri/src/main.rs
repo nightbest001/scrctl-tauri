@@ -1,4 +1,4 @@
-// SCRCTL — port Electron -> Tauri v2 (Rust).
+// Orbit — port Electron -> Tauri v2 (Rust).
 // Semua yang dulu ada di main.js: adb, client scrcpy (video/audio/control),
 // UHID, clipboard, notifikasi HP, setelan, window.
 //
@@ -529,7 +529,7 @@ async fn update_download(app: AppHandle, url: String, total: u64) -> Result<(), 
     {
         return Err("url ditolak".into());
     }
-    let path = std::env::temp_dir().join("SCRCTL-update-setup.exe");
+    let path = std::env::temp_dir().join("Orbit-update-setup.exe");
     let _ = std::fs::remove_file(&path);
     let mut cmd = Command::new("curl.exe");
     cmd.args(["-L", "--fail", "-sS", "-o"])
@@ -562,20 +562,41 @@ async fn update_download(app: AppHandle, url: String, total: u64) -> Result<(), 
     Ok(())
 }
 
-// Jalankan installer yang sudah di-download, lalu tutup app supaya file tidak terkunci.
+// Jalankan installer yang sudah di-download SECARA DIAM-DIAM (/S), lalu buka app lagi.
+// Pakai file .bat di temp: tunggu app ini keluar, pasang, lalu start exe baru.
 #[tauri::command]
 async fn update_install(app: AppHandle) -> Result<(), String> {
-    let path = std::env::temp_dir().join("SCRCTL-update-setup.exe");
+    let path = std::env::temp_dir().join("Orbit-update-setup.exe");
     if !path.exists() {
         return Err("file update tidak ada".into());
     }
     #[cfg(windows)]
     {
-        let mut cmd = Command::new(&path);
-        cmd.stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null());
+        let exe = std::env::current_exe().map_err(|e| e.to_string())?;
+        let bat = std::env::temp_dir().join("Orbit-update.bat");
+        let script = format!(
+            "@echo off\r\n\
+             ping -n 3 127.0.0.1 >nul\r\n\
+             taskkill /F /IM \"{exe_name}\" >nul 2>&1\r\n\
+             \"{setup}\" /S\r\n\
+             if exist \"%LOCALAPPDATA%\\Orbit\\Orbit.exe\" (start \"\" \"%LOCALAPPDATA%\\Orbit\\Orbit.exe\") else (start \"\" \"{exe}\")\r\n\
+             del \"{setup}\" >nul 2>&1\r\n\
+             (goto) 2>nul & del \"%~f0\"\r\n",
+            exe_name = exe.file_name().and_then(|n| n.to_str()).unwrap_or("Orbit.exe"),
+            setup = path.display(),
+            exe = exe.display(),
+        );
+        std::fs::write(&bat, script).map_err(|e| e.to_string())?;
+        let mut cmd = Command::new("cmd.exe");
+        cmd.arg("/C")
+            .arg(&bat)
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null());
+        cmd.creation_flags(0x0800_0200); // NO_WINDOW | NEW_PROCESS_GROUP
         cmd.spawn().map_err(|e| e.to_string())?;
     }
-    tokio::time::sleep(Duration::from_millis(500)).await;
+    tokio::time::sleep(Duration::from_millis(300)).await;
     app.exit(0);
     Ok(())
 }
@@ -1689,12 +1710,12 @@ async fn mirror_start(app: AppHandle, serial: String, device_name: Option<String
             tasks.push(tauri::async_runtime::spawn(clipboard_task(app.clone())));
         }
         if kb_uhid {
-            send_ctrl(&st, uhid_create(UHID_KEYBOARD_ID, "SCRCTL Keyboard", HID_KEYBOARD_DESC));
-            log(&app, "UHID dibuat: SCRCTL Keyboard", false);
+            send_ctrl(&st, uhid_create(UHID_KEYBOARD_ID, "Orbit Keyboard", HID_KEYBOARD_DESC));
+            log(&app, "UHID dibuat: Orbit Keyboard", false);
         }
         if ms_uhid {
-            send_ctrl(&st, uhid_create(UHID_MOUSE_ID, "SCRCTL Mouse", HID_MOUSE_DESC));
-            log(&app, "UHID dibuat: SCRCTL Mouse", false);
+            send_ctrl(&st, uhid_create(UHID_MOUSE_ID, "Orbit Mouse", HID_MOUSE_DESC));
+            log(&app, "UHID dibuat: Orbit Mouse", false);
         }
         if s_bool(&settings, "turnScreenOff") {
             let app_c = app.clone();
@@ -1951,5 +1972,5 @@ fn main() {
             pcmedia::pc_media_cmd,
         ])
         .run(tauri::generate_context!())
-        .expect("gagal menjalankan SCRCTL");
+        .expect("gagal menjalankan Orbit");
 }

@@ -4,7 +4,7 @@ import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 
 /**
- * Protokol SCRCTL Link v1 (sama dengan src-tauri/src/link.rs).
+ * Protokol Orbit Link v1 (sama dengan src-tauri/src/link.rs).
  * Frame = u32 BE panjang | u8 jenis | isi. Jenis 0 = JSON, 1 = potongan file (4 byte id BE + data).
  */
 object Proto {

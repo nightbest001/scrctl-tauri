@@ -12,15 +12,26 @@ android {
         applicationId = "app.scrctl.link"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "0.1.0"
+        // Diisi dari tag git lewat workflow: -PappVersion=0.6.1 -PappCode=601
+        versionCode = (project.findProperty("appCode") as String?)?.toIntOrNull() ?: 1
+        versionName = (project.findProperty("appVersion") as String?) ?: "0.1.0"
+    }
+
+    // Key tetap (di-commit) supaya tiap APK baru bisa menimpa APK lama.
+    // Debug key berubah tiap build di GitHub, bikin update gagal "app not installed".
+    signingConfigs {
+        create("scrctl") {
+            storeFile = file("scrctl-release.jks")
+            storePassword = "scrctl123"
+            keyAlias = "scrctl"
+            keyPassword = "scrctl123"
+        }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
-            // Ditandatangani debug key supaya APK langsung bisa di-install (sideload).
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("scrctl")
         }
     }
 

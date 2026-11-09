@@ -14,7 +14,7 @@ object Clip {
         main.post {
             try {
                 val cm = ctx.getSystemService(ClipboardManager::class.java)
-                cm.setPrimaryClip(ClipData.newPlainText("SCRCTL", text))
+                cm.setPrimaryClip(ClipData.newPlainText("Orbit", text))
             } catch (e: Exception) {
                 LinkHub.log("Gagal menulis clipboard: ${e.message}", true)
             }

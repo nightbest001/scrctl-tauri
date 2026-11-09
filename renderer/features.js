@@ -1,5 +1,5 @@
 // =============================================================================
-// SCRCTL — fitur tambahan di Beranda dan menu: kartu musik, Pesan, Telepon, Foto, Apps, Deck,
+// Orbit — fitur tambahan di Beranda dan menu: kartu musik, Pesan, Telepon, Foto, Apps, Deck,
 // serta tombol Wi-Fi / Bluetooth / Hotspot. Dimuat setelah renderer.js (memakai $, h, ICON, toast, dll).
 // Pesan dari HP datang lewat event "link-msg" (lihat src-tauri/src/link.rs dan android/.../Features.kt).
 // =============================================================================
@@ -166,7 +166,7 @@
   }
   function pageNote(id, capKey) {
     if (!connected()) return note(id, 'HP belum terhubung lewat Link. Buka menu Link HP untuk menyambungkan.');
-    if (caps && capKey && caps[capKey] === false) return note(id, 'Izin belum diberikan di HP. Buka app SCRCTL Link → bagian Izin → "Pesan, kontak, telepon, foto".');
+    if (caps && capKey && caps[capKey] === false) return note(id, 'Izin belum diberikan di HP. Buka app Orbit Link → bagian Izin → "Pesan, kontak, telepon, foto".');
     note(id, '');
   }
   const empty = (text) => h('div', { class: 'empty-note' }, text);
@@ -430,6 +430,71 @@
   fillPresets();
 
   // ---------------------------------------------------------------------------
+  // Kamera HP (frame JPEG lewat Link, digambar ke canvas)
+  // ---------------------------------------------------------------------------
+  const cam = { on: false, facing: 'back', drawing: false };
+  function camUi() {
+    $('camToggle').textContent = cam.on ? 'Matikan kamera' : 'Buka kamera';
+    $('camBack').classList.toggle('active', cam.facing === 'back');
+    $('camFront').classList.toggle('active', cam.facing === 'front');
+    document.querySelector('.cam-stage').classList.toggle('live', cam.on);
+    $('camEmpty').textContent = connected() ? 'Kamera mati' : 'HP belum terhubung';
+  }
+  const camStart = (facing) => { cam.facing = facing; camUi(); send({ t: 'cam', a: 'start', facing }); };
+  const camStop = () => { send({ t: 'cam', a: 'stop' }); cam.on = false; camUi(); };
+  $('camToggle').addEventListener('click', () => (cam.on ? camStop() : camStart(cam.facing)));
+  $('camSwitch').addEventListener('click', () => camStart(cam.facing === 'back' ? 'front' : 'back'));
+  $('camBack').addEventListener('click', () => { if (cam.on) camStart('back'); else { cam.facing = 'back'; camUi(); } });
+  $('camFront').addEventListener('click', () => { if (cam.on) camStart('front'); else { cam.facing = 'front'; camUi(); } });
+  $('camShot').addEventListener('click', () => {
+    const cv = $('camCanvas');
+    if (!cam.on) { toast('Kamera belum menyala', true); return; }
+    cv.toBlob(async (blob) => {
+      try {
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+        toast('Foto disalin ke clipboard PC');
+      } catch (e) { toast('Gagal menyalin foto', true); }
+    }, 'image/png');
+  });
+  api.onLinkCam((v) => {
+    if (currentPage !== 'camera' || cam.drawing) return;
+    cam.drawing = true;
+    const img = new Image();
+    img.onload = () => {
+      const cv = $('camCanvas');
+      const rot = v.rot % 4, w = img.width, hh = img.height, swap = rot % 2 === 1;
+      cv.width = swap ? hh : w; cv.height = swap ? w : hh;
+      const c = cv.getContext('2d');
+      c.save();
+      if (v.mirror) { c.translate(cv.width, 0); c.scale(-1, 1); }
+      c.translate(cv.width / 2, cv.height / 2);
+      c.rotate(rot * Math.PI / 2);
+      c.drawImage(img, -w / 2, -hh / 2);
+      c.restore();
+      if (!cam.on) { cam.on = true; camUi(); }
+      cam.drawing = false;
+    };
+    img.onerror = () => { cam.drawing = false; };
+    img.src = 'data:image/jpeg;base64,' + v.jpg;
+  });
+  function camState(v) {
+    cam.on = !!v.on;
+    if (v.facing) cam.facing = v.facing;
+    let msg = '';
+    if (v.err === 'perm') msg = 'Izin kamera belum diberikan di HP. Buka app Link di HP → bagian Izin → Kamera.';
+    else if (v.err === 'none') msg = 'HP tidak punya kamera itu.';
+    else if (v.err) msg = 'Kamera gagal: ' + v.err;
+    note('camNote', msg);
+    camUi();
+  }
+  function camPage() {
+    if (!connected()) note('camNote', 'HP belum terhubung lewat Link. Buka menu Link HP untuk menyambungkan.');
+    else if (caps && caps.camera === false) note('camNote', 'Izin kamera belum diberikan di HP. Buka app Link di HP → bagian Izin → Kamera.');
+    else note('camNote', '');
+    camUi();
+  }
+
+  // ---------------------------------------------------------------------------
   // Pesan dari HP
   // ---------------------------------------------------------------------------
   api.onLinkMsg((v) => {
@@ -439,8 +504,10 @@
         if (currentPage === 'sms') pageNote('smsNote', 'sms');
         if (currentPage === 'calls') pageNote('callNote', 'callLog');
         if (currentPage === 'photos') pageNote('photoNote', 'photos');
+        if (currentPage === 'camera') camPage();
         break;
       case 'media': onPhoneMedia(v); break;
+      case 'cam-state': camState(v); break;
       case 'sms-threads':
         sms.threads = v.list || []; sms.canSend = v.canSend !== false;
         renderSmsList();
@@ -480,6 +547,7 @@
     }
     if (!s.connected && wasConnected) {
       media.phone = { has: false };
+      cam.on = false; camUi();
       photos = []; apps = []; appsLoaded = false; callLog = []; sms.threads = []; sms.msgs = []; caps = null;
       document.getElementById('callBar').classList.add('hidden');
       renderMedia(); renderSmsList(); renderSmsMsgs(); renderCalls(); renderPhotos(); renderApps(); renderDeck();
@@ -494,6 +562,8 @@
   // Dipanggil showPage() di renderer.js
   // ---------------------------------------------------------------------------
   window.featurePage = (name) => {
+    if (name !== 'camera' && cam.on) camStop(); // hemat baterai HP: kamera mati saat halaman ditinggalkan
+    if (name === 'camera') { camPage(); send({ t: 'caps' }); send({ t: 'cam', a: 'state' }); }
     if (name === 'sms') { pageNote('smsNote', 'sms'); renderSmsList(); renderSmsMsgs(); refreshSms(); send({ t: 'caps' }); }
     else if (name === 'calls') { pageNote('callNote', 'callLog'); renderCalls(); send({ t: 'calls', a: 'log' }); send({ t: 'caps' }); }
     else if (name === 'photos') { pageNote('photoNote', 'photos'); renderPhotos(); if (!photos.length) loadPhotos(); send({ t: 'caps' }); }

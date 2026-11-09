@@ -89,12 +89,12 @@ class PhoneCalls(private val ctx: Context, private val scope: CoroutineScope, pr
     private fun dial(raw: String) {
         val number = raw.filter { it.isDigit() || it == '+' || it == '*' || it == '#' }
         if (number.isEmpty()) return
-        if (!canCall()) { err("Izin telepon belum diberikan. Buka app SCRCTL Link di HP, bagian Izin."); return }
+        if (!canCall()) { err("Izin telepon belum diberikan. Buka app Orbit Link di HP, bagian Izin."); return }
         telecom.placeCall(Uri.fromParts("tel", number, null), Bundle())
     }
 
     private fun log() {
-        if (!logAllowed()) { err("Izin riwayat panggilan belum diberikan. Buka app SCRCTL Link di HP, bagian Izin."); return }
+        if (!logAllowed()) { err("Izin riwayat panggilan belum diberikan. Buka app Orbit Link di HP, bagian Izin."); return }
         val arr = JSONArray()
         ctx.contentResolver.query(
             CallLog.Calls.CONTENT_URI,

@@ -19,13 +19,16 @@
     <uses-permission android:name="android.permission.ANSWER_PHONE_CALLS" />
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
     <uses-feature android:name="android.hardware.telephony" android:required="false" />
 
     <application
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
-        android:label="SCRCTL Link"
+        android:label="Orbit Link"
         android:theme="@style/Theme.SCRCTL">
 
         <activity
@@ -38,7 +41,7 @@
             </intent-filter>
         </activity>
 
-        <!-- Menu Bagikan -> "SCRCTL Link": kirim teks ke clipboard PC atau file ke PC -->
+        <!-- Menu Bagikan -> "Orbit Link": kirim teks ke clipboard PC atau file ke PC -->
         <activity
             android:name=".ShareActivity"
             android:excludeFromRecents="true"
@@ -60,12 +63,12 @@
         <service
             android:name=".LinkService"
             android:exported="false"
-            android:foregroundServiceType="dataSync" />
+            android:foregroundServiceType="dataSync|camera" />
 
         <service
             android:name=".NotifListener"
             android:exported="true"
-            android:label="SCRCTL Link"
+            android:label="Orbit Link"
             android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
             <intent-filter>
                 <action android:name="android.service.notification.NotificationListenerService" />

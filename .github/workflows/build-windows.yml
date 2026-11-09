@@ -68,18 +68,18 @@ jobs:
       - name: Portable zip (exe + adb)
         shell: pwsh
         run: |
-          $d = "portable/SCRCTL"
+          $d = "portable/Orbit"
           New-Item -ItemType Directory -Force $d | Out-Null
-          Copy-Item src-tauri/target/release/scrctl.exe $d/SCRCTL.exe
+          Copy-Item src-tauri/target/release/scrctl.exe $d/Orbit.exe
           Copy-Item -Recurse src-tauri/resources/platform-tools $d/platform-tools
           Copy-Item src-tauri/resources/LICENSE-scrcpy.txt $d/
-          Compress-Archive -Path portable/SCRCTL -DestinationPath SCRCTL-portable.zip
+          Compress-Archive -Path portable/Orbit -DestinationPath Orbit-portable.zip
 
       - uses: actions/upload-artifact@v4
         with:
-          name: SCRCTL-windows
+          name: Orbit-windows
           path: |
-            SCRCTL-portable.zip
+            Orbit-portable.zip
             src-tauri/target/release/bundle/nsis/*.exe
 
       - name: Release (kalau push tag v*)
@@ -87,5 +87,5 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            SCRCTL-portable.zip
+            Orbit-portable.zip
             src-tauri/target/release/bundle/nsis/*.exe

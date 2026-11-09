@@ -119,6 +119,6 @@ class PhoneSms(private val ctx: Context, private val scope: CoroutineScope, priv
 
     private fun denied() {
         post(JSONObject().put("t", "event").put("err", true)
-            .put("text", "Izin SMS belum diberikan. Buka app SCRCTL Link di HP, bagian Izin."))
+            .put("text", "Izin SMS belum diberikan. Buka app Orbit Link di HP, bagian Izin."))
     }
 }
