@@ -53,6 +53,9 @@ struct Peer {
     charging: bool,
     torch: Option<bool>,
     dnd: Option<bool>,
+    wifi: Option<bool>,
+    bt: Option<bool>,
+    hotspot: Option<bool>,
 }
 
 pub struct LinkState {
@@ -259,7 +262,10 @@ fn snapshot(app: &AppHandle) -> Value {
         "battery": p.battery,
         "charging": p.charging,
         "torch": p.torch,
-        "dnd": p.dnd
+        "dnd": p.dnd,
+        "wifi": p.wifi,
+        "bt": p.bt,
+        "hotspot": p.hotspot
     })
 }
 
@@ -463,6 +469,9 @@ async fn on_json(app: &AppHandle, name: &str, inc: &mut HashMap<u32, Incoming>, 
                 let mut p = ls.peer.lock().unwrap();
                 p.torch = v.get("torch").and_then(|x| x.as_bool());
                 p.dnd = v.get("dnd").and_then(|x| x.as_bool());
+                p.wifi = v.get("wifi").and_then(|x| x.as_bool());
+                p.bt = v.get("bt").and_then(|x| x.as_bool());
+                p.hotspot = v.get("hotspot").and_then(|x| x.as_bool());
             }
             emit_state(app);
         }
@@ -514,6 +523,7 @@ async fn on_json(app: &AppHandle, name: &str, inc: &mut HashMap<u32, Incoming>, 
                 let _ = f.file.flush().await;
                 let ok = f.size == 0 || f.got == f.size;
                 if ok {
+                    let _ = app.emit("link-file", json!({ "name": f.name, "path": f.path.to_string_lossy() }));
                     event(app, format!("File diterima: {} → {}", f.name, f.path.display()), false);
                 } else {
                     event(app, format!("File {} tidak lengkap ({} dari {})", f.name, human(f.got), human(f.size)), true);
@@ -523,6 +533,11 @@ async fn on_json(app: &AppHandle, name: &str, inc: &mut HashMap<u32, Incoming>, 
         "event" => {
             let err = v.get("err").and_then(|x| x.as_bool()).unwrap_or(false);
             event(app, s(&v, "text"), err);
+        }
+        // fitur tambahan: musik, SMS, telepon, foto, apps — diolah di renderer/features.js
+        "media" | "sms-threads" | "sms-thread" | "sms-sent" | "sms-changed" | "call-log" | "call-state" | "photos"
+        | "apps" | "caps" => {
+            let _ = app.emit("link-msg", v);
         }
         _ => {}
     }
@@ -649,4 +664,44 @@ pub async fn link_send_file(app: AppHandle) -> Value {
         }
     });
     json!({ "ok": true })
+}
+
+/// Pesan dari UI ke HP (musik, SMS, telepon, foto, apps). Hanya jenis pesan yang dikenal yang diteruskan.
+#[tauri::command]
+pub async fn link_send(app: AppHandle, msg: Value) -> bool {
+    let t = s(&msg, "t");
+    if !matches!(t.as_str(), "mcmd" | "sms" | "calls" | "photos" | "apps" | "caps") {
+        return false;
+    }
+    let tx = app.state::<LinkState>().tx.lock().unwrap().clone();
+    match tx {
+        Some(tx) => tx.send(Frame::Json(msg)).await.is_ok(),
+        None => false,
+    }
+}
+
+fn received_dir(app: &AppHandle) -> PathBuf {
+    match app.path().download_dir() {
+        Ok(d) => d.join("SCRCTL"),
+        Err(_) => app.state::<AppState>().data_dir.join("received"),
+    }
+}
+
+/// Buka file yang diterima dari HP (hanya yang ada di folder Downloads\SCRCTL) atau folder itu sendiri.
+#[tauri::command]
+pub fn link_open_received(app: AppHandle, path: Option<String>) -> Result<(), String> {
+    let dir = received_dir(&app);
+    let _ = std::fs::create_dir_all(&dir);
+    let dir = dir.canonicalize().map_err(|e| e.to_string())?;
+    let target = match path {
+        Some(p) if !p.is_empty() => {
+            let c = PathBuf::from(&p).canonicalize().map_err(|e| e.to_string())?;
+            if !c.starts_with(&dir) {
+                return Err("path ditolak".into());
+            }
+            c
+        }
+        _ => dir,
+    };
+    super::open_with_shell(&super::strip_verbatim(target).to_string_lossy())
 }

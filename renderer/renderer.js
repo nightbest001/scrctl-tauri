@@ -20,12 +20,36 @@ function h(tag, props, ...children) {
   return el;
 }
 
-const ICON = {
-  phone: '<svg viewBox="0 0 24 24"><rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M11 18.5h2"/></svg>',
-  wifi: '<svg viewBox="0 0 24 24"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1"/></svg>',
-  key: '<svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="m10.8 12.2 9.2-9.2M16 7l3 3M14 9l2 2"/></svg>',
-  close: '<svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>',
+const ICON = {  // Lucide
+  phone: '<svg viewBox="0 0 24 24"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>',
+  wifi: '<svg viewBox="0 0 24 24"><path d="M12 20h.01"/><path d="M2 8.82a15 15 0 0 1 20 0"/><path d="M5 12.859a10 10 0 0 1 14 0"/><path d="M8.5 16.429a5 5 0 0 1 7 0"/></svg>',
+  key: '<svg viewBox="0 0 24 24"><path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/></svg>',
+  close: '<svg viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>',
+  mirror: '<svg viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>',
+  send: '<svg viewBox="0 0 24 24"><path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/><path d="m21.854 2.147-10.94 10.939"/></svg>',
+  bell: '<svg viewBox="0 0 24 24"><path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M22 8c0-2.3-.8-4.3-2-6"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/><path d="M4 2C2.8 3.7 2 5.7 2 8"/></svg>',
+  link: '<svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>',
+  moon: '<svg viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>',
+  torch: '<svg viewBox="0 0 24 24"><path d="M18 6c0 2-2 2-2 4v10a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2V10c0-2-2-2-2-4V2h12z"/><line x1="6" x2="18" y1="6" y2="6"/><line x1="12" x2="12" y1="12" y2="12"/></svg>',
+  mute: '<svg viewBox="0 0 24 24"><path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"/><line x1="22" x2="16" y1="9" y2="15"/><line x1="16" x2="22" y1="9" y2="15"/></svg>',
+  volDn: '<svg viewBox="0 0 24 24"><path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"/><path d="M16 9a5 5 0 0 1 0 6"/></svg>',
+  volUp: '<svg viewBox="0 0 24 24"><path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"/><path d="M16 9a5 5 0 0 1 0 6"/><path d="M19.364 18.364a9 9 0 0 0 0-12.728"/></svg>',
+  clock: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+  zap: '<svg viewBox="0 0 24 24"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></svg>',
 };
+
+Object.assign(ICON, {
+  bt: '<svg viewBox="0 0 24 24"><path d="m7 7 10 10-5 5V2l5 5L7 17"/></svg>',
+  hotspot: '<svg viewBox="0 0 24 24"><path d="M12 12a2 2 0 1 0 0 .01"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 19.07a10 10 0 0 1 0-14.14"/></svg>',
+  play: '<svg viewBox="0 0 24 24"><polygon points="6 3 20 12 6 21 6 3"/></svg>',
+  pause: '<svg viewBox="0 0 24 24"><rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/></svg>',
+  next: '<svg viewBox="0 0 24 24"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" x2="19" y1="5" y2="19"/></svg>',
+  prev: '<svg viewBox="0 0 24 24"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" x2="5" y1="19" y2="5"/></svg>',
+  music: '<svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>',
+  pcIcon: '<svg viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="3" rx="2"/><path d="M8 21h8M12 17v4"/></svg>',
+  call: '<svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>',
+  callEnd: '<svg viewBox="0 0 24 24"><path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.42 19.42 0 0 1-3.33-2.67m-2.67-3.34a19.79 19.79 0 0 1-3.07-8.63A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91"/><line x1="22" x2="2" y1="2" y2="22"/></svg>',
+});
 
 // ---------------------------------------------------------------------------
 // State
@@ -81,7 +105,7 @@ $('winClose').addEventListener('click', () => window.api.windowClose());
 // ---------------------------------------------------------------------------
 // Navigasi
 // ---------------------------------------------------------------------------
-const PAGE_TITLES = { home: 'Beranda', notif: 'Notifikasi', link: 'Link HP', setup: 'Setup', settings: 'Setelan', log: 'Log' };
+const PAGE_TITLES = { home: 'Beranda', notif: 'Notifikasi', sms: 'Pesan', calls: 'Telepon', photos: 'Foto', apps: 'Apps', deck: 'Deck', link: 'Link HP', setup: 'Setup', settings: 'Setelan', log: 'Log' };
 
 function showPage(name) {
   currentPage = name;
@@ -94,6 +118,7 @@ function showPage(name) {
   if (name === 'settings') renderSettings();
   if (name === 'notif') { unreadNotif = 0; renderNotifs(); }
   if (name === 'link') refreshLink();
+  if (window.featurePage) window.featurePage(name); // halaman tambahan: features.js
   updateNotifBadge();
 }
 document.querySelectorAll('.nav-item').forEach((b) => b.addEventListener('click', () => showPage(b.dataset.page)));
@@ -153,7 +178,13 @@ function allDevices() {
 // Render Beranda
 // ---------------------------------------------------------------------------
 function render() {
+  if (mirroringSerial !== lastMirrorSerial) {
+    const dv = allDevices().find((d) => d.serial === (mirroringSerial || lastMirrorSerial));
+    tlPush(mirroringSerial ? 'Mirror layar dimulai' : 'Mirror dihentikan', dv ? (dv.name || dv.serial) : '', 'mirror');
+    lastMirrorSerial = mirroringSerial;
+  }
   renderBanner();
+  renderDash();
   renderDetected();
   renderGrid();
   renderSetupDetected();
@@ -168,6 +199,7 @@ function render() {
 function renderBanner() {
   const connectSvcs = scan.services.filter((s) => s.kind === 'connect');
   const banner = $('wdBanner');
+  banner.classList.toggle('hidden', !!scan.adbOk); // banner cuma tampil kalau adb tidak ketemu
   const hasAuto = scan.devices.some((d) => d.state === 'device' && d.serial.startsWith('adb-'));
   if (!scan.adbOk) {
     banner.classList.remove('ok');
@@ -307,6 +339,19 @@ function timeAgo(ts) {
   return new Date(ts).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
 }
 
+// Ikon app untuk notifikasi: cocokkan lewat package atau nama app, jatuh ke huruf awal.
+const APP_ICONS = [
+  ['whatsapp', /whatsapp/i], ['telegram', /telegram|challegram/i], ['discord', /discord/i],
+  ['roblox', /roblox/i], ['tiktok', /tiktok|musically|ugc\.trill/i], ['youtube', /youtube/i],
+  ['claude', /anthropic|\bclaude\b/i],
+];
+function appIcon(n) {
+  const key = `${n.pkg || ''} ${n.app || ''}`;
+  const hit = APP_ICONS.find(([, re]) => re.test(key));
+  if (hit) return h('div', { class: 'n-ico has-img' }, h('img', { src: `icons/${hit[0]}.png`, alt: n.app || '', draggable: 'false' }));
+  return h('div', { class: 'n-ico' }, (n.app || '?').charAt(0).toUpperCase());
+}
+
 function renderNotifs() {
   const list = $('notifList');
   list.innerHTML = '';
@@ -320,7 +365,7 @@ function renderNotifs() {
   }
   for (const n of notifs) {
     list.append(h('div', { class: 'notif' + (n.fresh ? ' fresh' : '') },
-      h('div', { class: 'n-ico' }, (n.app || '?').charAt(0).toUpperCase()),
+      appIcon(n),
       h('div', { class: 'n-main' },
         h('div', { class: 'n-meta' }, h('b', {}, n.app), h('span', {}, '•'), h('span', {}, n.device), h('span', {}, '•'), h('span', {}, timeAgo(n.ts))),
         n.title && h('div', { class: 'n-title' }, n.title),
@@ -335,6 +380,7 @@ window.api.onNotification((n) => {
   notifs = notifs.slice(0, 200);
   if (currentPage !== 'notif') { unreadNotif++; updateNotifBadge(); } else { renderNotifs(); }
   saveNotifs();
+  renderDash();
   toast(`${n.app}: ${n.title || n.text}`.slice(0, 90));
   if (settings && settings.notifDesktop && (!document.hasFocus() || currentPage !== 'notif')) {
     try { new Notification(`${n.app} • ${n.device}`, { body: [n.title, n.text].filter(Boolean).join('\n') }); } catch (e) { /* ignore */ }
@@ -775,6 +821,7 @@ function applyLink(next) {
   $('linkDnd').classList.toggle('on', !!i.dnd);
   $('linkFind').classList.toggle('on', linkFinding && !!i.connected);
   if (!i.connected) linkFinding = false;
+  renderDash();
 }
 
 async function refreshLink() {
@@ -782,7 +829,7 @@ async function refreshLink() {
 }
 
 window.api.onLinkState((s) => applyLink(s));
-window.api.onLinkEvent(({ text, err }) => { addLog('Link: ' + text, err); toast(text, err); });
+window.api.onLinkEvent(({ text, err }) => { addLog('Link: ' + text, err); toast(text, err); tlPush(text, 'Link', /file|kirim|terkirim|diterima/i.test(text) ? 'send' : 'link'); });
 
 const linkBtn = (id, cmd, on) => $(id).addEventListener('click', () => window.api.linkCmd(cmd, on));
 linkBtn('linkTorch', 'flashlight');
@@ -808,6 +855,154 @@ $('linkRegen').addEventListener('click', async () => {
   applyLink(await window.api.linkRegen());
   toast('Kode baru dibuat');
 });
+
+
+// ---------------------------------------------------------------------------
+// Dashboard Beranda (hero, aksi cepat, notifikasi, kontrol, timeline)
+// ---------------------------------------------------------------------------
+let timeline = [];
+try { timeline = JSON.parse(localStorage.getItem('scrctl.timeline') || '[]'); } catch (e) { timeline = []; }
+let lastMirrorSerial = null;
+
+function tlPush(title, sub, icon) {
+  timeline.unshift({ title, sub: sub || '', icon: icon || 'clock', ts: Date.now() });
+  timeline = timeline.slice(0, 30);
+  try { localStorage.setItem('scrctl.timeline', JSON.stringify(timeline)); } catch (e) { /* ignore */ }
+  renderDash();
+}
+
+function dashDevice() {
+  const list = allDevices();
+  return list.find((d) => d.serial === selectedSerial)
+    || list.find((d) => d.serial === mirroringSerial)
+    || list.find((d) => d.state === 'device')
+    || list[0] || null;
+}
+
+// Dial baterai: busur 320° (celah di bawah), titik di ujung, angka mengalir halus.
+// Gaya meniru CometDial React Bits, ditulis ulang SVG polos tanpa React.
+const BAT = (() => {
+  const R = 42, SW = 5, SWEEP = 320, START = 110, NS = 'http://www.w3.org/2000/svg';
+  const pt = (d) => { const a = (d * Math.PI) / 180; return [50 + Math.cos(a) * R, 50 + Math.sin(a) * R]; };
+  const arc = (a0, a1) => {
+    const [x0, y0] = pt(a0), [x1, y1] = pt(a1);
+    return `M ${x0.toFixed(2)} ${y0.toFixed(2)} A ${R} ${R} 0 ${a1 - a0 > 180 ? 1 : 0} 1 ${x1.toFixed(2)} ${y1.toFixed(2)}`;
+  };
+  const mk = (t, a) => { const e = document.createElementNS(NS, t); for (const k in a) e.setAttribute(k, a[k]); return e; };
+  const svg = mk('svg', { viewBox: '0 0 100 100' });
+  const lit = mk('path', { class: 'bat-lit', 'stroke-width': SW });
+  const head = mk('circle', { class: 'bat-head', r: SW * 0.9 });
+  svg.append(mk('path', { class: 'bat-track', d: arc(START, START + SWEEP), 'stroke-width': SW }), lit, head);
+  const num = h('span', { class: 'bat-num' }, '--');
+  const unit = h('span', { class: 'bat-unit' }, '%');
+  const el = h('div', { class: 'bat' }, svg, h('div', { class: 'bat-txt' }, num, unit));
+  const still = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let shown = null, target = null, raf = 0, last = 0;
+
+  function draw() {
+    if (target == null || shown == null) {
+      lit.setAttribute('d', ''); head.style.display = 'none'; num.textContent = '--'; unit.style.display = 'none';
+      return;
+    }
+    const ang = START + Math.max(0, Math.min(1, shown / 100)) * SWEEP;
+    lit.setAttribute('d', shown > 0.05 ? arc(START, ang) : '');
+    const [cx, cy] = pt(ang);
+    head.setAttribute('cx', cx.toFixed(2)); head.setAttribute('cy', cy.toFixed(2)); head.style.display = '';
+    num.textContent = String(Math.round(shown)); unit.style.display = '';
+  }
+  function step(now) {
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    shown += (target - shown) * (1 - Math.exp(-dt / 0.22));
+    if (Math.abs(target - shown) < 0.05) { shown = target; raf = 0; } else raf = requestAnimationFrame(step);
+    draw();
+  }
+  function set(pct, charging) {
+    el.className = 'bat ' + (pct == null ? '' : charging ? 'chg' : pct < 20 ? 'low' : '');
+    target = pct;
+    if (pct == null) { shown = null; draw(); return el; }
+    if (shown == null || still) { shown = pct; draw(); return el; }
+    if (!raf) { last = performance.now(); raf = requestAnimationFrame(step); }
+    return el;
+  }
+  return { set };
+})();
+
+function renderDash() {
+  if (!$('hero')) return;
+  const L = linkInfo || {};
+  const list = allDevices();
+  const dev = dashDevice();
+  const online = !!dev && dev.state === 'device';
+  const mirroring = !!dev && dev.serial === mirroringSerial;
+  const pct = L.connected && L.battery != null ? L.battery : null;
+
+  // Hero
+  const hero = $('hero');
+  hero.innerHTML = '';
+  hero.append(
+    h('div', { class: 'phone' }, BAT.set(pct, !!(L.connected && L.charging))),
+    h('div', { class: 'hero-info' },
+      h('div', { class: 'hero-name' }, dev ? (dev.name || dev.ip || dev.serial) : 'Belum ada HP'),
+      h('div', { class: 'hero-sub' }, dev ? (dev.usb ? 'USB' : (dev.ip ? `${dev.ip}:${dev.wdOn && dev.livePort ? dev.livePort : dev.port}` : dev.serial)) : 'Tambahkan lewat Setup atau klik HP yang terdeteksi di bawah.'),
+      h('div', { class: 'chips2' },
+        h('span', { class: 'chip2' }, h('span', { class: 'dot' + (online ? ' on' : '') }), mirroring ? 'Sedang mirror' : online ? 'ADB terhubung' : 'ADB offline'),
+        h('span', { class: 'chip2' }, h('span', { class: 'dot' + (L.connected ? ' on' : '') }), L.connected ? `Link: ${L.name}` : 'Link menunggu'),
+        L.connected && L.charging && h('span', { class: 'chip2' }, h('span', { class: 'ci', html: ICON.zap }), 'Mengisi')),
+      list.length > 1 && h('div', { class: 'hero-pick' }, list.map((d) => h('button', { class: d === dev ? 'on' : '', onclick: () => { selectedSerial = d.serial; renderDash(); renderGrid(); } }, d.name || d.ip || d.serial)))));
+
+  // Aksi cepat
+  const q = $('quick');
+  q.innerHTML = '';
+  const act = (icon, label, onclick, disabled, cls) => h('button', { class: cls || '', disabled: !!disabled, onclick }, h('span', { class: 'ico', html: ICON[icon] }), label);
+  q.append(
+    act('mirror', mirroring ? 'Stop mirror' : 'Mirror layar', async () => {
+      if (mirroring) { await window.api.stopMirror(); mirroringSerial = null; render(); } else if (dev) startMirrorFor(dev);
+    }, !dev || (!mirroring && dev.serial === busySerial), mirroring ? 'live' : ''),
+    act('send', 'Kirim file', async () => { const r = await window.api.linkSendFile(); if (r && r.err) toast(r.err, true); }, !L.connected),
+    act('bell', 'Cari HP', () => { linkFinding = !linkFinding; window.api.linkCmd('find', linkFinding); applyLink({}); }, !L.connected),
+    act('link', 'Link HP', () => showPage('link')));
+
+  // Notifikasi
+  const dl = $('dnList');
+  dl.innerHTML = '';
+  $('dnTitle').textContent = `Notifikasi · ${notifs.length}`;
+  if (!notifs.length) dl.append(h('div', { class: 'empty-note' }, 'Belum ada notifikasi dari HP.'));
+  for (const n of notifs.slice(0, 3)) {
+    dl.append(h('div', { class: 'dn' },
+      appIcon(n),
+      h('div', { style: 'min-width:0;flex:1' },
+        h('div', { class: 'dn-t' }, h('b', {}, n.app), ` · ${timeAgo(n.ts)}`),
+        n.title && h('div', { class: 'dn-h' }, n.title),
+        n.text && h('div', { class: 'dn-p' }, n.text))));
+  }
+
+  // Kontrol HP
+  $('ctlState').textContent = L.connected ? `Link: ${L.name}` : 'Link belum terhubung';
+  $('ctlState').classList.toggle('ok', !!L.connected);
+  const ctl = $('ctl');
+  ctl.innerHTML = '';
+  const cb = (icon, label, cmd, on) => h('button', { class: on ? 'on' : '', disabled: !L.connected, onclick: () => window.api.linkCmd(cmd) }, h('span', { html: ICON[icon] }), label);
+  // Wi-Fi / Bluetooth / Hotspot diubah lewat adb (Android melarang app biasa mengubahnya)
+  const tg = (icon, label, kind) => {
+    const on = window.toggleState ? window.toggleState(kind) : null;
+    return h('button', { class: on ? 'on' : '', disabled: !online, title: online ? '' : 'Butuh koneksi adb ke HP (menu Setup)', onclick: () => window.togglePhone && window.togglePhone(kind) }, h('span', { html: ICON[icon] }), label);
+  };
+  ctl.append(cb('moon', 'DND', 'dnd', L.dnd), cb('torch', 'Senter', 'flashlight', L.torch), cb('mute', 'Mute', 'mute'),
+    cb('volDn', 'Volume −', 'vol_down'), cb('volUp', 'Volume +', 'vol_up'),
+    tg('wifi', 'Wi-Fi', 'wifi'), tg('bt', 'BT', 'bt'), tg('hotspot', 'Hotspot', 'hotspot'));
+
+  // Timeline
+  const tl = $('tl');
+  tl.innerHTML = '';
+  if (!timeline.length) tl.append(h('div', { class: 'empty-note' }, 'Aktivitas mirror, file, dan clipboard muncul di sini.'));
+  for (const t of timeline.slice(0, 5)) {
+    tl.append(h('div', { class: 'tl-i' }, h('span', { class: 'ico', html: ICON[t.icon] || ICON.clock }),
+      h('div', {}, h('div', { class: 'tl-h' }, t.title), h('div', { class: 'tl-p' }, `${t.sub ? t.sub + ' · ' : ''}${timeAgo(t.ts)}`))));
+  }
+}
+$('dnAll').addEventListener('click', () => showPage('notif'));
+$('dnClear').addEventListener('click', () => { notifs = []; unreadNotif = 0; saveNotifs(); updateNotifBadge(); renderNotifs(); renderDash(); });
+setInterval(() => { if (currentPage === 'home' && !document.hidden) renderDash(); }, 30000);
 
 // ---------------------------------------------------------------------------
 // Init

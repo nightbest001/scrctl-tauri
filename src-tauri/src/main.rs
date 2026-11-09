@@ -39,6 +39,9 @@ macro_rules! args {
     };
 }
 
+mod pcmedia;
+mod phone;
+
 // ---------------------------------------------------------------------------
 // Konstanta
 // ---------------------------------------------------------------------------
@@ -494,6 +497,23 @@ async fn open_url(url: String) -> Result<(), String> {
             .stderr(Stdio::null());
         cmd.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
         cmd.spawn().map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+// Buka file/folder/URL dengan aplikasi default Windows. Lewat explorer.exe supaya tidak ada
+// parsing shell (aman dari karakter seperti & atau |).
+fn open_with_shell(target: &str) -> Result<(), String> {
+    #[cfg(windows)]
+    {
+        let mut cmd = Command::new("explorer.exe");
+        cmd.arg(target).stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null());
+        cmd.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
+        cmd.spawn().map_err(|e| e.to_string())?;
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = target;
     }
     Ok(())
 }
@@ -1857,6 +1877,7 @@ fn main() {
             });
             let handle = app.handle().clone();
             let handle_link = handle.clone();
+            pcmedia::run(handle.clone());
             tauri::async_runtime::spawn(async move {
                 notif_loop(handle).await;
             });
@@ -1919,6 +1940,15 @@ fn main() {
             link::link_regen,
             link::link_cmd,
             link::link_send_file,
+            link::link_send,
+            link::link_open_received,
+            phone::phone_toggle,
+            phone::phone_open_app,
+            phone::deck_get,
+            phone::deck_save,
+            phone::deck_run,
+            pcmedia::pc_media_state,
+            pcmedia::pc_media_cmd,
         ])
         .run(tauri::generate_context!())
         .expect("gagal menjalankan SCRCTL");

@@ -1,7 +1,13 @@
 package app.scrctl.link
 
 import android.app.NotificationManager
+import android.bluetooth.BluetoothAdapter
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.net.wifi.WifiManager
+import android.provider.Settings
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
 import android.media.AudioAttributes
@@ -24,7 +30,25 @@ class Commands(private val ctx: Context, private val post: (JSONObject) -> Unit)
     @Volatile private var torchOn = false
     private var ringtone: Ringtone? = null
 
+    private val pushTask = Runnable { pushStatus() }
+    private val netReceiver = object : BroadcastReceiver() {
+        override fun onReceive(c: Context, i: Intent) {
+            main.removeCallbacks(pushTask)
+            main.postDelayed(pushTask, 700)
+        }
+    }
+
     init {
+        // Wi-Fi / Bluetooth / hotspot diubah dari PC lewat adb: status ikut diperbarui otomatis.
+        try {
+            val f = IntentFilter().apply {
+                addAction(WifiManager.WIFI_STATE_CHANGED_ACTION)
+                addAction(BluetoothAdapter.ACTION_STATE_CHANGED)
+                addAction("android.net.wifi.WIFI_AP_STATE_CHANGED")
+            }
+            if (Build.VERSION.SDK_INT >= 33) ctx.registerReceiver(netReceiver, f, Context.RECEIVER_EXPORTED)
+            else ctx.registerReceiver(netReceiver, f)
+        } catch (_: Exception) {}
         try {
             cm.registerTorchCallback(object : CameraManager.TorchCallback() {
                 override fun onTorchModeChanged(cameraId: String, enabled: Boolean) {
@@ -57,8 +81,27 @@ class Commands(private val ctx: Context, private val post: (JSONObject) -> Unit)
         if (granted) {
             o.put("dnd", nm.currentInterruptionFilter.let { it != NotificationManager.INTERRUPTION_FILTER_ALL && it != NotificationManager.INTERRUPTION_FILTER_UNKNOWN })
         }
+        wifiOn()?.let { o.put("wifi", it) }
+        btOn()?.let { o.put("bt", it) }
+        hotspotOn()?.let { o.put("hotspot", it) }
         return o
     }
+
+    private fun wifiOn(): Boolean? = try {
+        ctx.getSystemService(WifiManager::class.java).isWifiEnabled
+    } catch (_: Exception) { null }
+
+    private fun btOn(): Boolean? = try {
+        Settings.Global.getInt(ctx.contentResolver, "bluetooth_on") == 1
+    } catch (_: Exception) { null }
+
+    // API tersembunyi: di beberapa versi Android diblokir, hasilnya null (status hotspot tidak diketahui).
+    private fun hotspotOn(): Boolean? = try {
+        val wm = ctx.getSystemService(WifiManager::class.java)
+        val m = WifiManager::class.java.getDeclaredMethod("isWifiApEnabled")
+        m.isAccessible = true
+        m.invoke(wm) as? Boolean
+    } catch (_: Throwable) { null }
 
     fun pushStatus() = post(statusJson())
 

@@ -22,34 +22,55 @@
 
   <!-- Sidebar kiri -->
   <nav class="sidebar">
+    <img class="nav-logo" src="icon.png" alt="">
     <button class="nav-item active" data-page="home">
-      <svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>
+      <svg viewBox="0 0 24 24"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
       <span>Beranda</span>
     </button>
     <button class="nav-item" data-page="notif">
-      <svg viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+      <svg viewBox="0 0 24 24"><path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/></svg>
       <span>Notifikasi</span>
       <i class="badge-count hidden" id="notifBadge">0</i>
     </button>
+    <button class="nav-item" data-page="sms">
+      <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      <span>Pesan</span>
+    </button>
+    <button class="nav-item" data-page="calls">
+      <svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+      <span>Telepon</span>
+    </button>
+    <button class="nav-item" data-page="photos">
+      <svg viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+      <span>Foto</span>
+    </button>
+    <button class="nav-item" data-page="apps">
+      <svg viewBox="0 0 24 24"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
+      <span>Apps</span>
+    </button>
+    <button class="nav-item" data-page="deck">
+      <svg viewBox="0 0 24 24"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+      <span>Deck</span>
+    </button>
     <button class="nav-item" data-page="link">
-      <svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.07 0l-3 3a5 5 0 0 0 7.07 7.07l1.7-1.7"/></svg>
+      <svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
       <span>Link HP</span>
     </button>
     <button class="nav-item" data-page="setup">
-      <svg viewBox="0 0 24 24"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1"/></svg>
+      <svg viewBox="0 0 24 24"><path d="M12 20h.01"/><path d="M2 8.82a15 15 0 0 1 20 0"/><path d="M5 12.859a10 10 0 0 1 14 0"/><path d="M8.5 16.429a5 5 0 0 1 7 0"/></svg>
       <span>Setup</span>
     </button>
     <button class="nav-item" data-page="settings">
-      <svg viewBox="0 0 24 24"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="9" cy="6" r="2.2" class="fill"/><circle cx="15" cy="12" r="2.2" class="fill"/><circle cx="8" cy="18" r="2.2" class="fill"/></svg>
+      <svg viewBox="0 0 24 24"><line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/></svg>
       <span>Setelan</span>
     </button>
     <button class="nav-item" data-page="log">
-      <svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/></svg>
+      <svg viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></svg>
       <span>Log</span>
       <i class="badge-dot hidden" id="logDot"></i>
     </button>
     <div class="nav-spacer"></div>
-    <div class="nav-foot" id="navVer" title="scrcpy server v4.1">v0.4.2</div>
+    <div class="nav-foot" id="navVer" title="scrcpy server v4.1">v0.5.0</div>
   </nav>
 
   <main class="content">
@@ -80,6 +101,29 @@
         <button class="btn primary" id="wdBannerBtn">Buka Setup</button>
       </div>
 
+      <div class="dash">
+        <div class="dash-main">
+          <div class="card hero" id="hero"></div>
+          <div class="card media hidden" id="mediaCard"></div>
+          <div class="qa" id="quick"></div>
+          <div class="card">
+            <div class="c-head"><h3 id="dnTitle">Notifikasi</h3>
+              <div class="c-act"><button class="btn ghost sm" id="dnAll">Lihat semua</button><button class="btn ghost sm" id="dnClear">Bersihkan</button></div></div>
+            <div class="dn-list" id="dnList"></div>
+          </div>
+        </div>
+        <div class="dash-side">
+          <div class="card">
+            <div class="c-head"><h3>Kontrol HP</h3><span class="c-link" id="ctlState">Link belum terhubung</span></div>
+            <div class="ctl" id="ctl"></div>
+          </div>
+          <div class="card">
+            <div class="c-head"><h3>Timeline</h3></div>
+            <div class="tl" id="tl"></div>
+          </div>
+        </div>
+      </div>
+
       <h2 class="section-title" id="detectedTitle">Terdeteksi di jaringan</h2>
       <div class="avatar-row" id="detectedRow"></div>
 
@@ -94,6 +138,75 @@
         <button class="btn ghost" id="clearNotif">Bersihkan</button>
       </div>
       <div class="notif-list" id="notifList"></div>
+    </section>
+
+    <!-- ===================== PESAN ===================== -->
+    <section class="page hidden" id="page-sms">
+      <div class="note hidden" id="smsNote"></div>
+      <div class="split">
+        <div class="card pane">
+          <div class="c-head"><h3>Percakapan</h3><button class="btn ghost sm" id="smsRefresh" data-link>Segarkan</button></div>
+          <div class="row-in"><input type="text" id="smsNew" placeholder="Nomor baru, mis. 0812…" spellcheck="false"><button class="btn sm" id="smsNewGo">Buka</button></div>
+          <div class="list" id="smsList"></div>
+        </div>
+        <div class="card pane convo">
+          <div class="c-head"><h3 id="smsHead">Pilih percakapan</h3></div>
+          <div class="msgs" id="smsMsgs"></div>
+          <div class="row-in"><input type="text" id="smsText" placeholder="Tulis pesan…" disabled><button class="btn primary sm" id="smsSend" disabled>Kirim</button></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== TELEPON ===================== -->
+    <section class="page hidden" id="page-calls">
+      <div class="note hidden" id="callNote"></div>
+      <div class="two-col">
+        <div class="card">
+          <div class="c-head"><h3>Telepon dari HP</h3></div>
+          <div class="row-in"><input type="text" id="callNum" placeholder="Nomor telepon" spellcheck="false"><button class="btn green sm" id="callGo" data-link>Telepon</button></div>
+          <p class="muted link-note">Panggilan dijalankan oleh HP; suara tetap di HP. Dari PC kamu bisa memulai, menjawab, dan menutup panggilan.</p>
+        </div>
+        <div class="card pane">
+          <div class="c-head"><h3>Riwayat</h3><button class="btn ghost sm" id="callRefresh" data-link>Segarkan</button></div>
+          <div class="list" id="callList"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== FOTO ===================== -->
+    <section class="page hidden" id="page-photos">
+      <div class="note hidden" id="photoNote"></div>
+      <div class="settings-head">
+        <p class="muted" id="photoHint">Klik foto untuk mengirim file aslinya ke PC (Downloads\SCRCTL) dan membukanya.</p>
+        <div class="c-act"><button class="btn ghost sm" id="photoFolder">Buka folder</button><button class="btn ghost sm" id="photoRefresh" data-link>Segarkan</button></div>
+      </div>
+      <div class="photo-grid" id="photoGrid"></div>
+    </section>
+
+    <!-- ===================== APPS ===================== -->
+    <section class="page hidden" id="page-apps">
+      <div class="settings-head">
+        <p class="muted" id="appHint">Klik app untuk membukanya di HP (lewat adb).</p>
+        <div class="c-act"><input type="text" id="appSearch" class="inline-search" placeholder="Cari app" spellcheck="false"><button class="btn ghost sm" id="appRefresh" data-link>Segarkan</button></div>
+      </div>
+      <div class="app-grid" id="appGrid"></div>
+    </section>
+
+    <!-- ===================== DECK ===================== -->
+    <section class="page hidden" id="page-deck">
+      <div class="settings-head">
+        <p class="muted">Tombol pintas: media PC, buka URL/app, dan perintah ke HP lewat Link.</p>
+        <div class="c-act"><button class="btn ghost sm" id="deckReset">Reset</button><button class="btn sm" id="deckEdit">Edit</button></div>
+      </div>
+      <div class="deck-grid" id="deckGrid"></div>
+      <div class="card deck-add hidden" id="deckAdd">
+        <div class="c-head"><h3>Tambah tombol</h3></div>
+        <div class="row-in">
+          <input type="text" id="deckLabel" placeholder="Nama tombol" spellcheck="false">
+          <select id="deckKind"><option value="key">Media PC</option><option value="link">Perintah HP</option><option value="url">Buka URL</option><option value="open">Buka file/app PC</option></select>
+        </div>
+        <div class="row-in"><select id="deckPreset"></select><input type="text" id="deckValue" placeholder="https://… atau C:\path\app.exe" spellcheck="false" class="hidden"><button class="btn primary sm" id="deckAddBtn">Tambah</button></div>
+      </div>
     </section>
 
     <!-- ===================== LINK HP ===================== -->
@@ -219,9 +332,11 @@
   </div>
 </div>
 
+<div class="callbar hidden" id="callBar"></div>
 <div class="toast" id="toast"></div>
 
 <script src="tauri-shim.js"></script>
 <script src="renderer.js"></script>
+<script src="features.js"></script>
 </body>
 </html>

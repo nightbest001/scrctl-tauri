@@ -69,6 +69,19 @@ class MainActivity : ComponentActivity() {
 
     private val resumeTick = mutableIntStateOf(0)
     private val askNotif = registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
+    private val askFeatures = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+        resumeTick.intValue++
+        LinkHub.client?.features?.handle(org.json.JSONObject().put("t", "caps"))
+    }
+
+    private fun featurePerms(): Array<String> = buildList {
+        add(Manifest.permission.READ_SMS); add(Manifest.permission.SEND_SMS)
+        add(Manifest.permission.READ_CONTACTS); add(Manifest.permission.READ_CALL_LOG)
+        add(Manifest.permission.CALL_PHONE); add(Manifest.permission.ANSWER_PHONE_CALLS)
+        add(Manifest.permission.READ_PHONE_STATE)
+        if (Build.VERSION.SDK_INT >= 33) add(Manifest.permission.READ_MEDIA_IMAGES)
+        else add(Manifest.permission.READ_EXTERNAL_STORAGE)
+    }.toTypedArray()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -259,6 +272,16 @@ class MainActivity : ComponentActivity() {
                 }
                 PermRow("Notifikasi app (status koneksi)", postOk) {
                     if (Build.VERSION.SDK_INT >= 33) askNotif.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }
+                val featuresOk = featurePerms().all { ctx.checkSelfPermission(it) == PackageManager.PERMISSION_GRANTED }
+                PermRow("Pesan, kontak, telepon, foto (halaman Pesan/Telepon/Foto di PC)", featuresOk) {
+                    askFeatures.launch(featurePerms())
+                }
+                if (!featuresOk) {
+                    Text(
+                        "Kalau dialog izin tidak muncul (Android 13+, app dari luar Play Store): Info app → ⋮ → Izinkan setelan terbatas, lalu ulangi.",
+                        fontSize = 12.sp, color = Dim,
+                    )
                 }
                 PermRow("Bebas hemat baterai (koneksi tidak diputus)", battery) {
                     open(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, true)

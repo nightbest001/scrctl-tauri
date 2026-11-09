@@ -38,6 +38,7 @@ class LinkClient(context: Context, private val scope: CoroutineScope) {
 
     private val receiver = FileReceiver(ctx) { text, err -> LinkHub.log(text, err) }
     val commands = Commands(ctx) { post(it) }
+    val features = Features(ctx, scope, { post(it) }, { u -> sendUris(listOf(u)) })
 
     /** Dipanggil (di thread IO) setiap kali handshake berhasil. */
     var onConnected: (() -> Unit)? = null
@@ -108,6 +109,7 @@ class LinkClient(context: Context, private val scope: CoroutineScope) {
         onReady()
         LinkHub.setConn(Conn.Connected, pc, "Terhubung ke $pc")
         LinkHub.log("Terhubung ke $pc", false)
+        features.onConnected()
         onConnected?.invoke()
 
         launch {
@@ -122,6 +124,7 @@ class LinkClient(context: Context, private val scope: CoroutineScope) {
                 if (f.kind == 0) handleJson(JSONObject(String(f.body, Charsets.UTF_8))) else receiver.chunk(f.body)
             }
         } finally {
+            features.onDisconnected()
             receiver.abortAll()
         }
     }
@@ -135,7 +138,7 @@ class LinkClient(context: Context, private val scope: CoroutineScope) {
             "cmd" -> commands.run(o)
             "file-start" -> receiver.start(o.optInt("id"), o.optString("name"), o.optLong("size"))
             "file-end" -> receiver.end(o.optInt("id"))
-            else -> {}
+            else -> features.handle(o)
         }
     }
 

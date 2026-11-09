@@ -51,6 +51,19 @@ Push ke GitHub, tab **Actions → Build Android APK** (atau *Run workflow*), lal
 **Artifacts → SCRCTL-Link** (`SCRCTL-Link.apk`). Tag `v*` otomatis melampirkan APK ke Releases.
 APK ditandatangani debug key, jadi bisa langsung di-install; Play Protect mungkin menanyakan konfirmasi.
 
+### Fitur tambahan (terinspirasi NectarLink)
+
+Semua lewat koneksi Link yang sama (protokol JSON, lihat `android/.../Features.kt` dan `src-tauri/src/link.rs`):
+
+- **Kartu musik** di Beranda: musik di HP (sesi media Android, butuh Akses notifikasi) dan di PC (Windows SMTC,
+  `src-tauri/src/pcmedia.rs`) — judul, artis, cover (HP), seek, play/pause/next/prev. Kalau dua-duanya ada, pilih PC/HP.
+- **Wi-Fi / Bluetooth / Hotspot** di Kontrol HP: dijalankan lewat adb (`svc wifi|bluetooth`, `cmd connectivity start-tethering`),
+  jadi butuh HP terhubung via adb (menu Setup). Status Wi-Fi/BT dibaca app Link; status hotspot hanya diketahui kalau Android mengizinkan.
+- **Pesan** (SMS, baca + balas + nomor baru), **Telepon** (riwayat, telepon dari PC, jawab/tolak/akhiri, panggilan masuk),
+  **Foto** (thumbnail + unduh file asli ke Downloads\SCRCTL), **Apps** (daftar app + buka di HP lewat adb), **Deck** (tombol pintas:
+  media key PC, buka URL/app, perintah HP). Izin HP: app Link → Izin → "Pesan, kontak, telepon, foto".
+- Belum ada: MMS, suara panggilan di PC, window app terpisah, enkripsi data Link.
+
 ## Struktur
 
 - `src-tauri/src/main.rs` — semua backend: adb, client scrcpy (video/audio/control), UHID, clipboard, notifikasi HP, setelan, window.
