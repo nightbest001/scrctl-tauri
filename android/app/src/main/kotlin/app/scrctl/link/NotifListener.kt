@@ -13,6 +13,7 @@ class NotifListener : NotificationListenerService() {
     override fun onNotificationPosted(sbn: StatusBarNotification) {
         val client = LinkHub.client ?: return
         if (sbn.packageName == packageName) return
+        if (!Prefs.allow(this, "notif")) return // toggle di app Link
         val n = sbn.notification ?: return
         if ((n.flags and Notification.FLAG_GROUP_SUMMARY) != 0) return
         if (sbn.isOngoing) return // pemutar musik, progres, dsb

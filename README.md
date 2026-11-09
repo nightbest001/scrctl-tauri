@@ -24,6 +24,13 @@ Tauri v2: backend ditulis dengan Rust, antarmuka dengan HTML/CSS/JS.
 - Kartu musik di Beranda untuk HP dan PC (Windows SMTC).
 - Deck: tombol pintas untuk media key, URL, aplikasi, dan perintah HP.
 
+**Kontrol PC dari HP (Orbit Link)**
+- Touchpad: gerak, klik kiri/kanan/tengah, seret, dan gulir (dua jari atau jalur gulir).
+- Keyboard: ketik teks langsung ke PC, tombol khusus (Esc, Tab, Enter, panah, Home, End), modifier Ctrl/Alt/Shift/Win, dan pintasan siap pakai.
+- Volume dan tombol media.
+- Layar PC di app HP: sentuh untuk klik, tahan lalu geser untuk seret. Ada pilihan kualitas dan mode layar penuh.
+- Default mati. Nyalakan di Orbit: menu **Link HP**, bagian **Kontrol PC dari HP**. Saat layar PC dikirim, tanda muncul di title bar Orbit.
+
 Belum didukung: MMS, suara panggilan di PC, dan enkripsi data Link.
 
 ## Unduh
@@ -46,7 +53,7 @@ Build terbaru ada di halaman [Releases](https://github.com/nightbest001/scrctl-t
 Persyaratan: Windows 10/11 dengan WebView2 untuk PC, Android 8.0 (API 26) atau lebih baru untuk app Link.
 
 > **Keamanan.** Kode pairing tidak dikirim lewat jaringan (handshake HMAC-SHA256), tetapi isi data Link
-> belum dienkripsi. Gunakan hanya di jaringan WiFi yang dipercaya. Windows dapat meminta izin firewall
+> belum dienkripsi. Itu termasuk ketikan keyboard dan gambar layar saat Kontrol PC dari HP dinyalakan. Gunakan hanya di jaringan WiFi yang dipercaya. Windows dapat meminta izin firewall
 > saat pertama kali dijalankan (port TCP 5588).
 
 Android 13+ dapat memblokir dialog izin untuk app yang dipasang dari luar Play Store. Jika itu terjadi,
@@ -113,5 +120,4 @@ Protokol Link berbasis JSON lewat TCP. Penanganan pesan di sisi HP ada di
 ## Lisensi dan atribusi
 
 `scrcpy-server.jar` adalah server resmi scrcpy v4.1 milik Genymobile, berlisensi Apache 2.0
-(lihat `src-tauri/resources/LICENSE-scrcpy.txt`). Font Montserrat berlisensi SIL OFL
-(lihat `renderer/fonts/LICENSE-montserrat.txt`).
+(lihat `src-tauri/resources/LICENSE-scrcpy.txt`).

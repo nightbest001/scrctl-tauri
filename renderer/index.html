@@ -10,6 +10,7 @@
 <!-- Title bar (frameless) -->
 <div class="titlebar">
   <div class="tb-brand"><img class="tb-logo" src="icon.png" alt="">Orbit</div>
+  <div class="tb-live hidden" id="ctlLive">HP sedang melihat layar PC</div>
   <div class="tb-drag"></div>
   <div class="tb-ctl">
     <button id="winMin" title="Minimize"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
@@ -239,7 +240,7 @@
       <div class="two-col">
 
         <div class="card">
-          <div class="card-head"><span class="step">1</span><div><h3>Sambungkan HP</h3><p id="linkStatus">menunggu HP…</p></div></div>
+          <div class="card-head"><div><h3>Sambungkan HP</h3><p id="linkStatus">menunggu HP…</p></div></div>
           <ol class="hint">
             <li>Install <b>Orbit Link</b> (APK) di HP, satu WiFi dengan PC</li>
             <li>Isi alamat dan kode ini di app, lalu tekan Hubungkan</li>
@@ -256,7 +257,7 @@
         </div>
 
         <div class="card">
-          <div class="card-head"><span class="step">2</span><div><h3>Kontrol HP</h3><p id="linkBattery">Baterai: -</p></div></div>
+          <div class="card-head"><div><h3>Kontrol HP dari PC</h3><p id="linkBattery">Baterai: -</p></div></div>
           <div class="link-grid">
             <button class="btn" id="linkTorch" data-link>Senter</button>
             <button class="btn" id="linkDnd" data-link>Jangan Ganggu</button>
@@ -270,6 +271,20 @@
         </div>
 
       </div>
+
+      <div class="card" style="margin-top:16px">
+        <div class="card-head">
+          <div><h3>Kontrol PC dari HP</h3><p id="pcCtlStatus">Dimatikan</p></div>
+          <label class="switch"><input type="checkbox" id="pcCtlToggle"><span class="track"></span></label>
+        </div>
+        <ul class="feat">
+          <li>Touchpad: gerak, klik, seret, dan gulir</li>
+          <li>Keyboard: ketik teks, tombol khusus, dan pintasan</li>
+          <li>Volume dan tombol media</li>
+          <li>Lihat layar PC di app Orbit Link dan sentuh untuk klik</li>
+        </ul>
+        <p class="warn-note">Data Link belum dienkripsi. Nyalakan hanya di WiFi yang kamu percaya, dan matikan saat tidak dipakai. Saat layar PC dikirim, tanda muncul di bagian atas jendela ini.</p>
+      </div>
     </section>
 
     <!-- ===================== SETUP ===================== -->
@@ -277,7 +292,7 @@
       <div class="two-col">
 
         <div class="card">
-          <div class="card-head"><span class="step">1</span><div><h3>Pairing</h3><p>Hanya perlu sekali per HP.</p></div></div>
+          <div class="card-head"><div><h3>Pairing</h3><p>Hanya perlu sekali per HP.</p></div></div>
           <ol class="hint">
             <li>Di HP: Developer options → Wireless debugging → <b>Pair device with pairing code</b></li>
             <li>Isi IP:PORT dan kode 6 digit yang muncul di HP</li>
@@ -290,7 +305,7 @@
         </div>
 
         <div class="card">
-          <div class="card-head"><span class="step">2</span><div><h3>Tambah device</h3><p>Port ini beda dari port pairing.</p></div></div>
+          <div class="card-head"><div><h3>Tambah device</h3><p>Port ini beda dari port pairing.</p></div></div>
           <ol class="hint">
             <li>Lihat <b>IP address &amp; Port</b> di layar utama Wireless debugging</li>
             <li>Atau pilih dari daftar yang terdeteksi otomatis di bawah</li>

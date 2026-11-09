@@ -18,6 +18,14 @@ object Prefs {
     fun allow(c: Context, key: String): Boolean = sp(c).getBoolean("allow_$key", true)
     fun setAllow(c: Context, key: String, on: Boolean) { sp(c).edit().putBoolean("allow_$key", on).apply() }
 
+    /** Pengaturan kontrol PC: kecepatan kursor (1..3), gulir natural, kualitas layar (0..2). */
+    fun padSpeed(c: Context): Int = sp(c).getInt("pad_speed", 2)
+    fun setPadSpeed(c: Context, v: Int) { sp(c).edit().putInt("pad_speed", v).apply() }
+    fun naturalScroll(c: Context): Boolean = sp(c).getBoolean("natural_scroll", true)
+    fun setNaturalScroll(c: Context, v: Boolean) { sp(c).edit().putBoolean("natural_scroll", v).apply() }
+    fun screenQuality(c: Context): Int = sp(c).getInt("screen_quality", 1)
+    fun setScreenQuality(c: Context, v: Int) { sp(c).edit().putInt("screen_quality", v).apply() }
+
     fun setEnabled(c: Context, on: Boolean) {
         sp(c).edit().putBoolean("enabled", on).apply()
     }

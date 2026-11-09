@@ -814,12 +814,23 @@ function applyLink(next) {
   st.textContent = i.connected ? `Terhubung: ${i.name}` : 'menunggu HP…';
   st.classList.toggle('link-ok', !!i.connected);
   let bat = 'Baterai: -';
-  if (i.connected && i.battery != null) bat = `Baterai HP: ${i.battery}%${i.charging ? ' ⚡ mengisi' : ''}`;
+  if (i.connected && i.battery != null) bat = `Baterai HP: ${i.battery}%${i.charging ? ', mengisi' : ''}`;
   $('linkBattery').textContent = bat;
   document.querySelectorAll('[data-link]').forEach((b) => { b.disabled = !i.connected; });
   $('linkTorch').classList.toggle('on', !!i.torch);
   $('linkDnd').classList.toggle('on', !!i.dnd);
   $('linkFind').classList.toggle('on', linkFinding && !!i.connected);
+  const ct = $('pcCtlToggle');
+  if (ct) ct.checked = !!i.control;
+  const cs = $('pcCtlStatus');
+  if (cs) {
+    cs.textContent = !i.control ? 'Dimatikan'
+      : i.screen ? 'Aktif. HP sedang melihat layar PC.'
+      : i.connected ? 'Aktif. HP siap mengontrol PC.'
+      : 'Aktif. Menunggu HP terhubung.';
+    cs.classList.toggle('link-ok', !!i.control);
+  }
+  $('ctlLive').classList.toggle('hidden', !(i.control && i.screen && i.connected));
   if (!i.connected) linkFinding = false;
   renderDash();
 }
@@ -842,6 +853,20 @@ $('linkFind').addEventListener('click', () => {
   window.api.linkCmd('find', linkFinding);
   applyLink({});
 });
+$('pcCtlToggle').addEventListener('change', async (e) => {
+  const on = e.target.checked;
+  if (on) {
+    const ok = await window.api.confirmDialog({
+      title: 'Kontrol PC dari HP',
+      message: 'HP yang terhubung akan bisa menggerakkan mouse, mengetik, dan melihat layar PC ini.',
+      detail: 'Data Link belum dienkripsi. Nyalakan hanya di WiFi yang kamu percaya.',
+      ok: 'Nyalakan'
+    });
+    if (!ok) { e.target.checked = false; return; }
+  }
+  try { applyLink(await window.api.linkSetControl(on)); }
+  catch (err) { e.target.checked = !on; toast('Gagal mengubah pengaturan', true); }
+});
 $('linkSendFile').addEventListener('click', async () => {
   const r = await window.api.linkSendFile();
   if (r && r.err) toast(r.err, true);
@@ -850,7 +875,7 @@ $('linkCopy').addEventListener('click', async () => {
   try { await navigator.clipboard.writeText($('linkAddr').textContent); toast('Alamat disalin'); } catch (e) { toast('Gagal menyalin', true); }
 });
 $('linkRegen').addEventListener('click', async () => {
-  const ok = await window.api.confirmDialog({ title: 'Kode baru', message: 'HP yang sedang terhubung akan terputus dan harus pakai kode baru.', detail: '' });
+  const ok = await window.api.confirmDialog({ title: 'Kode baru', message: 'HP yang sedang terhubung akan terputus dan harus pakai kode baru.', detail: '', ok: 'Buat kode baru' });
   if (!ok) return;
   applyLink(await window.api.linkRegen());
   toast('Kode baru dibuat');

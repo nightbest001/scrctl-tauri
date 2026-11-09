@@ -88,7 +88,9 @@ class LinkService : Service() {
         val nm = getSystemService(NotificationManager::class.java)
         scope.launch {
             LinkHub.ui.collect { st ->
-                nm.notify(NOTIF_ID, buildNotification(st.message.ifEmpty { "Orbit Link" }))
+                // Toggle "Notifikasi app": mati = teks notifikasi tidak lagi menampilkan status koneksi
+                val text = if (Prefs.allow(this@LinkService, "status")) st.message.ifEmpty { "Orbit Link" } else "Orbit Link berjalan"
+                nm.notify(NOTIF_ID, buildNotification(text))
             }
         }
     }

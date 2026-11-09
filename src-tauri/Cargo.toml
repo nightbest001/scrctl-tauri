@@ -22,7 +22,8 @@ sha2 = "0.10"
 base64 = "0.22"
 
 [target.'cfg(windows)'.dependencies]
-windows-sys = { version = "0.59", features = ["Win32_UI_Input_KeyboardAndMouse"] }
+windows-sys = { version = "0.59", features = ["Win32_UI_Input_KeyboardAndMouse", "Win32_UI_WindowsAndMessaging", "Win32_Graphics_Gdi", "Win32_Foundation"] }
+jpeg-encoder = "0.6"
 windows = { version = "0.58", features = ["Media_Control", "Foundation", "Win32_System_WinRT"] }
 
 [profile.release]

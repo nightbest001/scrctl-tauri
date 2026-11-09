@@ -39,6 +39,7 @@ macro_rules! args {
     };
 }
 
+mod pcctl;
 mod pcmedia;
 mod phone;
 
@@ -461,6 +462,7 @@ async fn dialog_confirm(
     title: Option<String>,
     message: Option<String>,
     detail: Option<String>,
+    ok: Option<String>,
 ) -> bool {
     let mut msg = message.unwrap_or_default();
     if let Some(d) = detail {
@@ -474,7 +476,10 @@ async fn dialog_confirm(
         .message(msg)
         .title(title.unwrap_or_else(|| "Konfirmasi".to_string()))
         .kind(MessageDialogKind::Warning)
-        .buttons(MessageDialogButtons::OkCancelCustom("Hapus".to_string(), "Batal".to_string()))
+        .buttons(MessageDialogButtons::OkCancelCustom(
+            ok.filter(|t| !t.is_empty()).unwrap_or_else(|| "Hapus".to_string()),
+            "Batal".to_string(),
+        ))
         .show(move |ok| {
             let _ = tx.send(ok);
         });
@@ -1963,6 +1968,7 @@ fn main() {
             link::link_send_file,
             link::link_send,
             link::link_open_received,
+            link::link_set_control,
             phone::phone_toggle,
             phone::phone_open_app,
             phone::deck_get,

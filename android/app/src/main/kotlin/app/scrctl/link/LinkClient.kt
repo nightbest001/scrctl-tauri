@@ -121,10 +121,15 @@ class LinkClient(context: Context, private val scope: CoroutineScope) {
         try {
             while (true) {
                 val f = readFrame(din)
-                if (f.kind == 0) handleJson(JSONObject(String(f.body, Charsets.UTF_8))) else receiver.chunk(f.body)
+                when (f.kind) {
+                    0 -> handleJson(JSONObject(String(f.body, Charsets.UTF_8)))
+                    3 -> LinkHub.pc.onFrame(f.body)
+                    else -> receiver.chunk(f.body)
+                }
             }
         } finally {
             features.onDisconnected()
+            LinkHub.pc.onDisconnected()
             receiver.abortAll()
         }
     }
@@ -136,6 +141,7 @@ class LinkClient(context: Context, private val scope: CoroutineScope) {
                 LinkHub.log("Clipboard PC → HP tersinkron", false)
             }
             "cmd" -> commands.run(o)
+            "pc-state" -> LinkHub.pc.onState(o)
             "file-start" -> receiver.start(o.optInt("id"), o.optString("name"), o.optLong("size"))
             "file-end" -> receiver.end(o.optInt("id"))
             else -> features.handle(o)
@@ -146,6 +152,26 @@ class LinkClient(context: Context, private val scope: CoroutineScope) {
     fun post(o: JSONObject) {
         scope.launch(Dispatchers.IO) {
             try { sendJson(o) } catch (_: Exception) {}
+        }
+    }
+
+    // Antrean berurutan untuk input PC (tekan/lepas tombol harus sampai dengan urutan yang sama).
+    private val seqExec = java.util.concurrent.Executors.newSingleThreadExecutor { r -> Thread(r, "orbit-input").apply { isDaemon = true } }
+    private val seqPending = AtomicInteger(0)
+
+    /** Kirim pesan berurutan. Kalau antrean menumpuk (jaringan lambat), pesan gerak dan gulir dibuang. */
+    fun postSeq(o: JSONObject) {
+        val a = o.optString("a")
+        val droppable = a == "move" || a == "abs" || a == "scroll"
+        if (droppable && seqPending.get() > 48) return
+        seqPending.incrementAndGet()
+        seqExec.execute {
+            try {
+                kotlinx.coroutines.runBlocking { sendJson(o) }
+            } catch (_: Exception) {
+            } finally {
+                seqPending.decrementAndGet()
+            }
         }
     }
 

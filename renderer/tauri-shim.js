@@ -68,6 +68,7 @@
     linkRegen: function () { return invoke('link_regen'); },
     linkCmd: function (cmd, on) { return invoke('link_cmd', { cmd: cmd, on: on === undefined ? null : on }); },
     linkSendFile: function () { return invoke('link_send_file'); },
+    linkSetControl: function (on) { return invoke('link_set_control', { on: !!on }); },
     linkSend: function (msg) { return invoke('link_send', { msg: msg }); },
     linkOpenReceived: function (path) { return invoke('link_open_received', { path: path || null }); },
     onLinkMsg: function (cb) { listen('link-msg', cb); },

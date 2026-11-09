@@ -10,7 +10,8 @@
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, AtomicUsize, Ordering};
+use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::Duration;
 
@@ -25,6 +26,7 @@ use tokio::net::tcp::{OwnedReadHalf, OwnedWriteHalf};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::{mpsc, oneshot};
 
+use super::pcctl::{self, Button};
 use super::{clip_read, clip_write, log, read_json, write_json, AppState};
 
 const DEFAULT_PORT: u16 = 5588;
@@ -38,18 +40,20 @@ enum Frame {
     Json(Value),
     Bin(Vec<u8>),
     Cam(Vec<u8>), // jenis 2: [putaran/90][cermin][JPEG] dari kamera HP
+    Screen(Vec<u8>), // jenis 3: JPEG layar PC -> HP
 }
 
 #[derive(Default)]
 struct Cfg {
     token: String,
     port: u16,
+    control: bool, // HP boleh mengontrol PC (default mati)
 }
 
 fn save_cfg(path: &Path, c: &Cfg) {
     write_json(
         path,
-        &json!({ "token": c.token, "port": c.port }),
+        &json!({ "token": c.token, "port": c.port, "control": c.control }),
     );
 }
 
@@ -74,6 +78,10 @@ pub struct LinkState {
     clip: Mutex<Option<String>>,
     file_id: AtomicU32,
     conn: AtomicU64,
+    control: AtomicBool,
+    screen_on: AtomicBool,
+    screen_gen: AtomicU64,
+    screen_q: Arc<AtomicUsize>,
 }
 
 fn gen_token() -> String {
@@ -130,7 +138,8 @@ pub fn init(data_dir: &Path) -> LinkState {
         token = gen_token();
         dirty = true;
     }
-    let cfg = Cfg { token, port };
+    let control = v.get("control").and_then(|x| x.as_bool()).unwrap_or(false);
+    let cfg = Cfg { token, port, control };
     if dirty {
         save_cfg(&path, &cfg);
     }
@@ -142,6 +151,10 @@ pub fn init(data_dir: &Path) -> LinkState {
         clip: Mutex::new(None),
         file_id: AtomicU32::new(1),
         conn: AtomicU64::new(0),
+        control: AtomicBool::new(control),
+        screen_on: AtomicBool::new(false),
+        screen_gen: AtomicU64::new(0),
+        screen_q: Arc::new(AtomicUsize::new(0)),
     }
 }
 
@@ -165,6 +178,8 @@ async fn read_frame(r: &mut OwnedReadHalf) -> std::io::Result<Frame> {
         Ok(Frame::Json(v))
     } else if kind == 2 {
         Ok(Frame::Cam(body))
+    } else if kind == 3 {
+        Ok(Frame::Screen(body))
     } else {
         Ok(Frame::Bin(body))
     }
@@ -180,10 +195,14 @@ async fn write_frame(w: &mut OwnedWriteHalf, f: &Frame) -> std::io::Result<()> {
             out.push(0);
             out.extend_from_slice(&body);
         }
-        Frame::Bin(b) | Frame::Cam(b) => {
+        Frame::Bin(b) | Frame::Cam(b) | Frame::Screen(b) => {
             out = Vec::with_capacity(5 + b.len());
             out.extend_from_slice(&((b.len() + 1) as u32).to_be_bytes());
-            out.push(if matches!(f, Frame::Cam(_)) { 2 } else { 1 });
+            out.push(match f {
+                Frame::Cam(_) => 2,
+                Frame::Screen(_) => 3,
+                _ => 1,
+            });
             out.extend_from_slice(b);
         }
     }
@@ -280,7 +299,9 @@ fn snapshot(app: &AppHandle) -> Value {
         "dnd": p.dnd,
         "wifi": p.wifi,
         "bt": p.bt,
-        "hotspot": p.hotspot
+        "hotspot": p.hotspot,
+        "control": ls.control.load(Ordering::SeqCst),
+        "screen": ls.screen_on.load(Ordering::SeqCst)
     })
 }
 
@@ -376,13 +397,20 @@ async fn handle(app: AppHandle, sock: TcpStream, addr: String) {
     emit_state(&app);
     event(&app, format!("HP terhubung: {}", name), false);
 
+    let screen_q = app.state::<LinkState>().screen_q.clone();
     let writer = tauri::async_runtime::spawn(async move {
         while let Some(f) = rx.recv().await {
-            if write_frame(&mut w, &f).await.is_err() {
+            let is_screen = matches!(f, Frame::Screen(_));
+            let res = write_frame(&mut w, &f).await;
+            if is_screen {
+                let _ = screen_q.fetch_update(Ordering::SeqCst, Ordering::SeqCst, |n| Some(n.saturating_sub(1)));
+            }
+            if res.is_err() {
                 break;
             }
         }
     });
+    send_pc_state(&app);
 
     // ping + dorong clipboard PC -> HP
     let helper = {
@@ -429,6 +457,7 @@ async fn handle(app: AppHandle, sock: TcpStream, addr: String) {
             Frame::Json(v) => on_json(&app, &name, &mut incoming, v).await,
             Frame::Bin(b) => on_chunk(&mut incoming, b).await,
             Frame::Cam(b) => on_cam(&app, b),
+            Frame::Screen(_) => {}
         }
     }
 
@@ -437,6 +466,7 @@ async fn handle(app: AppHandle, sock: TcpStream, addr: String) {
     {
         let ls = app.state::<LinkState>();
         if ls.conn.load(Ordering::SeqCst) == my_id {
+            stop_screen(&app);
             *ls.tx.lock().unwrap() = None;
             *ls.kick.lock().unwrap() = None;
             *ls.peer.lock().unwrap() = Peer::default();
@@ -556,6 +586,8 @@ async fn on_json(app: &AppHandle, name: &str, inc: &mut HashMap<u32, Incoming>, 
                 }
             }
         }
+        "pc" => pc_input(app, &v),
+        "screen" => screen_cmd(app, &v),
         "event" => {
             let err = v.get("err").and_then(|x| x.as_bool()).unwrap_or(false);
             event(app, s(&v, "text"), err);
@@ -567,6 +599,203 @@ async fn on_json(app: &AppHandle, name: &str, inc: &mut HashMap<u32, Incoming>, 
         }
         _ => {}
     }
+}
+
+// ---------------------------------------------------------------------------
+// Kontrol PC dari HP: input dan layar
+// ---------------------------------------------------------------------------
+fn num(v: &Value, k: &str) -> f64 {
+    v.get(k).and_then(|x| x.as_f64()).filter(|x| x.is_finite()).unwrap_or(0.0)
+}
+
+fn control_on(app: &AppHandle) -> bool {
+    app.state::<LinkState>().control.load(Ordering::SeqCst)
+}
+
+/// Kirim status kontrol PC ke HP: diizinkan atau tidak, ukuran layar, dan apakah layar sedang dikirim.
+fn send_pc_state(app: &AppHandle) {
+    let ls = app.state::<LinkState>();
+    let tx = ls.tx.lock().unwrap().clone();
+    if let Some(tx) = tx {
+        let (w, h) = pcctl::screen_size();
+        let msg = json!({
+            "t": "pc-state",
+            "control": ls.control.load(Ordering::SeqCst),
+            "screen": ls.screen_on.load(Ordering::SeqCst),
+            "w": w,
+            "h": h
+        });
+        let _ = tx.try_send(Frame::Json(msg));
+    }
+}
+
+fn pc_input(app: &AppHandle, v: &Value) {
+    let a = s(v, "a");
+    if a == "state" {
+        send_pc_state(app);
+        return;
+    }
+    if !control_on(app) {
+        send_pc_state(app); // HP tahu kontrol dimatikan di PC
+        return;
+    }
+    match a.as_str() {
+        "move" => {
+            let dx = num(v, "dx").clamp(-2000.0, 2000.0).round() as i32;
+            let dy = num(v, "dy").clamp(-2000.0, 2000.0).round() as i32;
+            if dx != 0 || dy != 0 {
+                pcctl::mouse_move_rel(dx, dy);
+            }
+        }
+        "abs" => pcctl::mouse_move_abs(num(v, "x"), num(v, "y")),
+        "down" => pcctl::mouse_button(Button::parse(&s(v, "b")), true),
+        "up" => pcctl::mouse_button(Button::parse(&s(v, "b")), false),
+        "click" => {
+            let n = v.get("n").and_then(|x| x.as_u64()).unwrap_or(1).min(3) as u32;
+            pcctl::mouse_click(Button::parse(&s(v, "b")), n.max(1));
+        }
+        "scroll" => {
+            let dx = num(v, "dx").clamp(-1200.0, 1200.0).round() as i32;
+            let dy = num(v, "dy").clamp(-1200.0, 1200.0).round() as i32;
+            pcctl::scroll(dx, dy);
+        }
+        "text" => {
+            let text: String = s(v, "s").chars().take(500).collect();
+            if !text.is_empty() {
+                pcctl::type_text(&text);
+            }
+        }
+        "key" | "media" => {
+            let mods: Vec<String> = v
+                .get("mods")
+                .and_then(|x| x.as_array())
+                .map(|arr| arr.iter().filter_map(|m| m.as_str().map(|t| t.to_string())).take(4).collect())
+                .unwrap_or_default();
+            let name = s(v, "k");
+            if !pcctl::key_combo(&mods, &name) {
+                event(app, format!("Tombol tidak dikenal dari HP: {}", name), true);
+            }
+        }
+        _ => {}
+    }
+}
+
+fn stop_screen(app: &AppHandle) {
+    let ls = app.state::<LinkState>();
+    ls.screen_gen.fetch_add(1, Ordering::SeqCst);
+    if ls.screen_on.swap(false, Ordering::SeqCst) {
+        emit_state(app);
+    }
+}
+
+fn screen_cmd(app: &AppHandle, v: &Value) {
+    match s(v, "a").as_str() {
+        "start" => {
+            if !control_on(app) {
+                send_pc_state(app);
+                return;
+            }
+            let max_w = v.get("max").and_then(|x| x.as_u64()).unwrap_or(1280).clamp(320, 1920) as u32;
+            let fps = v.get("fps").and_then(|x| x.as_u64()).unwrap_or(12).clamp(1, 30) as u32;
+            let q = v.get("q").and_then(|x| x.as_u64()).unwrap_or(55).clamp(20, 90) as u8;
+            start_screen(app, max_w, fps, q);
+        }
+        "stop" => {
+            stop_screen(app);
+            send_pc_state(app);
+            event(app, "HP berhenti melihat layar PC", false);
+        }
+        _ => {}
+    }
+}
+
+fn start_screen(app: &AppHandle, max_w: u32, fps: u32, quality: u8) {
+    let ls = app.state::<LinkState>();
+    let tx = match ls.tx.lock().unwrap().clone() {
+        Some(t) => t,
+        None => return,
+    };
+    let gen = ls.screen_gen.fetch_add(1, Ordering::SeqCst) + 1;
+    ls.screen_on.store(true, Ordering::SeqCst);
+    let queue = ls.screen_q.clone();
+    let app2 = app.clone();
+    emit_state(app);
+    send_pc_state(app);
+    event(app, "HP sedang melihat layar PC", false);
+    std::thread::spawn(move || {
+        let mut grab = match pcctl::Grabber::new(max_w) {
+            Some(g) => g,
+            None => {
+                event(&app2, "Layar PC tidak bisa ditangkap", true);
+                let ls = app2.state::<LinkState>();
+                if ls.screen_gen.load(Ordering::SeqCst) == gen {
+                    ls.screen_on.store(false, Ordering::SeqCst);
+                    emit_state(&app2);
+                    send_pc_state(&app2);
+                }
+                return;
+            }
+        };
+        let step = Duration::from_millis((1000 / fps.max(1)) as u64);
+        let mut last_sent = std::time::Instant::now() - Duration::from_secs(10);
+        loop {
+            let t0 = std::time::Instant::now();
+            {
+                let ls = app2.state::<LinkState>();
+                if ls.screen_gen.load(Ordering::SeqCst) != gen || !ls.control.load(Ordering::SeqCst) {
+                    break;
+                }
+            }
+            if let Some((jpg, changed)) = grab.frame(quality) {
+                // gambar sama: kirim ulang paling cepat tiap 1 detik supaya HP tahu masih hidup
+                let due = changed || last_sent.elapsed() >= Duration::from_secs(1);
+                if due && queue.load(Ordering::SeqCst) < 2 {
+                    queue.fetch_add(1, Ordering::SeqCst);
+                    match tx.try_send(Frame::Screen(jpg)) {
+                        Ok(()) => last_sent = std::time::Instant::now(),
+                        Err(mpsc::error::TrySendError::Full(_)) => {
+                            let _ = queue.fetch_update(Ordering::SeqCst, Ordering::SeqCst, |n| Some(n.saturating_sub(1)));
+                        }
+                        Err(mpsc::error::TrySendError::Closed(_)) => break,
+                    }
+                }
+            }
+            let spent = t0.elapsed();
+            if spent < step {
+                std::thread::sleep(step - spent);
+            }
+        }
+        let ls = app2.state::<LinkState>();
+        if ls.screen_gen.load(Ordering::SeqCst) == gen {
+            ls.screen_on.store(false, Ordering::SeqCst);
+            emit_state(&app2);
+        }
+    });
+}
+
+#[tauri::command]
+pub fn link_set_control(app: AppHandle, on: bool) -> Value {
+    {
+        let ls = app.state::<LinkState>();
+        let dir = app.state::<AppState>().data_dir.clone();
+        {
+            let mut c = ls.cfg.lock().unwrap();
+            c.control = on;
+            save_cfg(&dir.join("link.json"), &c);
+        }
+        ls.control.store(on, Ordering::SeqCst);
+    }
+    if !on {
+        stop_screen(&app);
+    }
+    event(
+        &app,
+        if on { "Kontrol PC dari HP dinyalakan" } else { "Kontrol PC dari HP dimatikan" },
+        false,
+    );
+    send_pc_state(&app);
+    emit_state(&app);
+    link_info(app)
 }
 
 // ---------------------------------------------------------------------------

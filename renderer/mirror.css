@@ -1,16 +1,12 @@
-@font-face { font-family:'Builder Sans'; font-weight:500; src:url('fonts/BuilderSans-Medium.otf'); }
-@font-face { font-family:'Builder Sans'; font-weight:700; src:url('fonts/BuilderSans-Bold.otf'); }
-@font-face { font-family:'Montserrat'; font-weight:500; src:url('fonts/montserrat-latin-500-normal.woff2') format('woff2'); }
-@font-face { font-family:'Montserrat'; font-weight:700; src:url('fonts/montserrat-latin-700-normal.woff2') format('woff2'); }
 
 :root {
   --bg:#121214; --card:#1f2025; --card-2:#2b2c34; --text:#fff; --text-2:#bdbebe;
   --blue:#335fff; --green:#00c97f; --red:#e8505b;
-  --font:'Builder Sans','Montserrat','Segoe UI',system-ui,sans-serif;
+  --font:'Segoe UI Variable Text','Segoe UI',system-ui,sans-serif;
 }
 * { box-sizing:border-box; }
 html,body { height:100%; margin:0; }
-body { display:flex; flex-direction:column; font-family:var(--font); font-weight:500; background:var(--bg); color:var(--text); overflow:hidden; }
+body { display:flex; flex-direction:column; font-family:var(--font); font-weight:400; background:var(--bg); color:var(--text); overflow:hidden; }
 .hidden { display:none !important; }
 
 svg { width:100%; height:100%; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; display:block; }

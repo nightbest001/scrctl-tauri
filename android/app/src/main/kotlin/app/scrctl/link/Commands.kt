@@ -126,6 +126,10 @@ class Commands(private val ctx: Context, private val post: (JSONObject) -> Unit)
     }
 
     private fun setDnd(on: Boolean?) {
+        if (!Prefs.allow(ctx, "dnd")) {
+            err("Kontrol Jangan Ganggu dimatikan lewat toggle di app Orbit Link.")
+            return
+        }
         if (!nm.isNotificationPolicyAccessGranted) {
             err("Izin Jangan Ganggu belum diberikan. Buka app Orbit Link di HP, bagian Izin.")
             return

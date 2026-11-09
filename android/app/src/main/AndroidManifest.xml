@@ -41,6 +41,15 @@
             </intent-filter>
         </activity>
 
+        <!-- Kontrol PC: touchpad, keyboard, layar PC -->
+        <activity
+            android:name=".ControlActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|smallestScreenSize|uiMode"
+            android:screenOrientation="fullSensor"
+            android:windowSoftInputMode="adjustResize"
+            android:label="Kontrol PC" />
+
         <!-- Menu Bagikan -> "Orbit Link": kirim teks ke clipboard PC atau file ke PC -->
         <activity
             android:name=".ShareActivity"

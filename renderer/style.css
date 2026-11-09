@@ -1,35 +1,22 @@
-/* Font: Builder Sans (font Roblox) dipakai kalau filenya ada di renderer/fonts,
-   kalau tidak, otomatis jatuh ke Montserrat yang sudah dibundel. */
-@font-face { font-family:'Builder Sans'; font-weight:400; src:url('fonts/BuilderSans-Regular.otf'); }
-@font-face { font-family:'Builder Sans'; font-weight:500; src:url('fonts/BuilderSans-Medium.otf'); }
-@font-face { font-family:'Builder Sans'; font-weight:700; src:url('fonts/BuilderSans-Bold.otf'); }
-@font-face { font-family:'Builder Sans'; font-weight:800; src:url('fonts/BuilderSans-ExtraBold.otf'); }
-
-@font-face { font-family:'Montserrat'; font-weight:400; src:url('fonts/montserrat-latin-400-normal.woff2') format('woff2'); }
-@font-face { font-family:'Montserrat'; font-weight:500; src:url('fonts/montserrat-latin-500-normal.woff2') format('woff2'); }
-@font-face { font-family:'Montserrat'; font-weight:600; src:url('fonts/montserrat-latin-600-normal.woff2') format('woff2'); }
-@font-face { font-family:'Montserrat'; font-weight:700; src:url('fonts/montserrat-latin-700-normal.woff2') format('woff2'); }
-@font-face { font-family:'Montserrat'; font-weight:800; src:url('fonts/montserrat-latin-800-normal.woff2') format('woff2'); }
-
 :root {
-  --bg:#121214;
-  --bg-2:#191a1e;
-  --card:#1f2025;
-  --card-2:#272830;
-  --line:#2f3038;
-  --text:#ffffff;
-  --text-2:#bdbebe;
-  --text-3:#8b8c91;
-  --blue:#335fff;
-  --blue-2:#4d73ff;
-  --green:#00b06f;
-  --green-2:#00c97f;
-  --red:#e8505b;
-  --amber:#f2b134;
-  --radius:12px;
-  --r-lg:20px;
-  --blue-soft:rgba(51,95,255,.16);
-  --font:'Builder Sans','Montserrat','Segoe UI',system-ui,sans-serif;
+  --bg:#121316;
+  --bg-2:#181a1f;
+  --card:#1f2229;
+  --card-2:#272a32;
+  --line:#2a2d35;
+  --text:#eceef2;
+  --text-2:#a6aab4;
+  --text-3:#767b87;
+  --blue:#4f76ff;
+  --blue-2:#6b8cff;
+  --green:#2fa874;
+  --green-2:#34b27f;
+  --red:#e0585f;
+  --amber:#d9a441;
+  --radius:8px;
+  --r-lg:10px;
+  --blue-soft:rgba(79,118,255,.14);
+  --font:'Segoe UI Variable Text','Segoe UI',system-ui,sans-serif;
 }
 
 * { box-sizing:border-box; }
@@ -506,3 +493,127 @@ select option { background:#1f2025; }
 .cam-seg { display:flex; gap:8px; margin-top:12px; }
 .cam-seg .btn.active { background:var(--blue); color:#fff; }
 
+
+
+/* =====================================================================
+   Tema: datar, netral, satu warna aksen. Dipakai paling akhir supaya
+   menimpa lapisan lama di atas.
+   ===================================================================== */
+body { font-size:13px; font-weight:400; }
+b, strong { font-weight:600; }
+.topbar h1 { font-size:18px; font-weight:600; }
+.section-title { font-size:12px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--text-3); margin:26px 0 10px; }
+
+/* Title bar */
+.tb-brand { font-weight:600; letter-spacing:0; font-size:12px; }
+.tb-live { margin-left:14px; display:flex; align-items:center; gap:7px; font-size:11px; font-weight:600; color:var(--amber); -webkit-app-region:no-drag; }
+.tb-live::before { content:''; width:7px; height:7px; border-radius:50%; background:var(--amber); }
+
+/* Sidebar */
+.nav-item { border-radius:8px; font-weight:500; }
+.nav-item:hover { background:var(--bg-2); }
+.nav-item.active { background:var(--card); }
+.nav-item.active::before { content:''; position:absolute; left:-8px; top:10px; bottom:10px; width:3px; border-radius:0 3px 3px 0; background:var(--blue); }
+.nav-item.active svg { color:var(--blue-2); fill:none; }
+.nav-item.active span { color:var(--text); }
+.nav-logo { margin:6px 0 12px; width:36px; height:36px; }
+.content { border-top-left-radius:12px; background:var(--bg); }
+
+/* Kartu */
+.card, .group, .banner, .notif, .dk, .qa button { border:1px solid var(--line); }
+.card { background:var(--bg-2); border-radius:var(--r-lg); padding:16px; }
+.card-head h3, .c-head h3 { font-size:14px; font-weight:600; }
+.card-head p { color:var(--text-3); }
+.c-link { color:var(--text-2); font-weight:500; }
+.c-link.ok, .link-ok { color:var(--green-2); }
+.step { display:none; }
+.card-head { justify-content:space-between; }
+.group-title { font-weight:600; font-size:13px; }
+.row .r-label { font-weight:500; }
+
+/* Tombol */
+.btn { height:32px; border-radius:8px; font-weight:600; font-size:12.5px; background:var(--card-2); border:1px solid var(--line); }
+.btn:hover { filter:none; background:#2e313a; }
+.btn.primary { background:var(--blue); border-color:var(--blue); }
+.btn.primary:hover { background:var(--blue-2); border-color:var(--blue-2); }
+.btn.green { background:var(--green); border-color:var(--green); }
+.btn.danger { background:var(--red); border-color:var(--red); }
+.btn.ghost { background:transparent; border-color:var(--line); box-shadow:none; color:var(--text-2); }
+.btn.ghost:hover { background:var(--card); color:var(--text); }
+.btn.wide { height:36px; }
+.btn.sm { height:28px; font-size:12px; }
+
+/* Beranda */
+.hero { background:var(--bg-2); box-shadow:none; gap:20px; }
+.phone { width:84px; height:168px; border-radius:16px; background:#0e0f12; box-shadow:none; border:1px solid var(--line); }
+.hero-name { font-size:20px; font-weight:600; }
+.chip2 { background:var(--card); border:1px solid var(--line); height:28px; font-weight:500; }
+.hero-pick button, .m-src button { background:transparent; border:1px solid var(--line); font-weight:500; }
+.hero-pick button.on, .m-src button.on { background:var(--blue); border-color:var(--blue); color:#fff; }
+.qa { grid-template-columns:1.6fr 1fr 1fr 1fr; gap:10px; }
+.qa button { background:var(--bg-2); border-radius:var(--r-lg); font-weight:600; padding:14px 16px; }
+.qa button:hover:not(:disabled) { background:var(--card); transform:none; }
+.qa button:first-child { background:var(--blue); border-color:var(--blue); font-size:14px; padding:16px 18px; }
+.qa button:first-child:hover:not(:disabled) { background:var(--blue-2); }
+.qa button.live { background:var(--red); border-color:var(--red); }
+.ctl button { background:var(--card); border:1px solid var(--line); border-radius:8px; font-weight:500; }
+.ctl button:hover:not(:disabled) { filter:none; background:var(--card-2); }
+.ctl button.on { background:var(--blue); border-color:var(--blue); }
+.tl-h, .dn-h, .m-title { font-weight:600; }
+.m-art { border-radius:8px; }
+.m-btn { background:var(--card); border:1px solid var(--line); }
+.m-btn.main { background:var(--blue); border-color:var(--blue); }
+.m-bar { height:4px; }
+
+/* Perangkat dan avatar */
+.avatar .circle { background:var(--card); border:1px solid var(--line); }
+.avatar .circle::after { border-color:var(--bg); }
+.thumb { background:var(--card); border:1px solid var(--line); }
+.tile.selected .thumb { box-shadow:0 0 0 2px var(--blue); }
+.tile-title { font-weight:600; }
+.tag { font-weight:600; }
+
+/* Form */
+input[type=text], input[type=number], select { background:var(--card); border:1px solid var(--line); height:34px; }
+input:focus, select:focus { border-color:var(--blue); }
+.row-in input, .row-in select, .inline-search { background:var(--card); border:1px solid var(--line); }
+.link-code { font-size:20px; font-weight:600; letter-spacing:.08em; font-variant-numeric:tabular-nums; background:var(--card); border:1px solid var(--line); }
+.chip { background:var(--card); border:1px solid var(--line); font-weight:500; }
+.switch .track { background:#3a3d46; }
+
+/* Pesan, foto, deck */
+.bub { border-radius:12px; }
+.bub.in { background:var(--card); border-bottom-left-radius:4px; }
+.bub.out { border-bottom-right-radius:4px; }
+.li { border-radius:8px; }
+.li-t { font-weight:600; }
+.li-av { background:var(--card); color:var(--text-2); font-weight:600; }
+.li-av.red { background:rgba(224,88,95,.14); color:var(--red); }
+.ph, .ap { border-radius:8px; }
+.dk { border-radius:var(--r-lg); font-weight:600; }
+.dk:hover:not(:disabled) { background:var(--card); transform:none; }
+.dk-ico { color:var(--text-2); }
+.cam-stage { border-radius:var(--r-lg); border:1px solid var(--line); }
+
+/* Notifikasi */
+.notif { border-radius:var(--r-lg); }
+.notif.fresh { box-shadow:inset 2px 0 0 var(--blue); }
+.notif .n-ico, .dn .n-ico { background:var(--card-2); font-weight:600; }
+.notif .n-title { font-weight:600; }
+
+/* Pembuka */
+.launch { background:var(--bg); }
+.lc-card { border-radius:12px; background:var(--bg-2); box-shadow:inset 0 0 0 1px var(--line); }
+.lc-title { font-size:28px; font-weight:600; letter-spacing:0; }
+.lc-h { font-weight:600; }
+.lc-stat { font-weight:600; }
+.lc-ico { background:var(--card); border:1px solid var(--line); }
+
+/* Fitur: Kontrol dari HP */
+.feat { list-style:none; margin:12px 0 0; padding:0; display:grid; gap:6px; color:var(--text-2); font-size:12px; }
+.feat li { display:flex; gap:8px; }
+.feat li::before { content:''; width:4px; height:4px; margin-top:7px; border-radius:50%; background:var(--text-3); flex-shrink:0; }
+.warn-note { margin:14px 0 0; padding:10px 12px; border-radius:var(--radius); background:rgba(217,164,65,.10); border:1px solid rgba(217,164,65,.28); color:var(--amber); font-size:12px; line-height:1.45; }
+
+.search input[type=text] { background:transparent; border:0; height:auto; padding:0; }
+.search { border:1px solid var(--line); background:var(--bg-2); }

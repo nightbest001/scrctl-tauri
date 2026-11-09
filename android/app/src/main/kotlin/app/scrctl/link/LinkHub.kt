@@ -25,6 +25,9 @@ object LinkHub {
     @Volatile
     var client: LinkClient? = null
 
+    /** Kontrol PC dari HP (touchpad, keyboard, layar PC). */
+    val pc = PcRemote()
+
     fun setConn(c: Conn, pc: String?, msg: String?) {
         ui.update { it.copy(conn = c, pc = pc, message = msg ?: "") }
     }
