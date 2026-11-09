@@ -36,6 +36,8 @@ document.getElementById('btnClose').addEventListener('click', () => window.api.w
 
 // ---- Init: main process tells us which device this window belongs to ----
 window.api.onMirrorInit(({ serial, deviceName, control, audio, keyboardUhid: kb, mouseUhid: ms }) => {
+  mirrorSerial = serial;
+  setBattery(null, false);
   setTitle(deviceName || serial);
   noSignalHint.textContent = 'menghubungkan…';
   noSignal.classList.remove('stopped');
@@ -51,6 +53,35 @@ window.api.onMirrorInit(({ serial, deviceName, control, audio, keyboardUhid: kb,
   if (!audio) closeAudio();
 });
 
+// ---- Baterai HP: event `mirror-battery` dari Rust (poll dumpsys battery) ----
+const batBar = document.getElementById('batBar');
+const batText = document.getElementById('batText');
+const batFill = document.getElementById('batFill');
+const batBolt = document.getElementById('batBolt');
+let mirrorSerial = null;
+
+function setBattery(level, charging) {
+  if (level == null) {
+    batText.textContent = '--%';
+    batFill.setAttribute('width', '0');
+    batBar.classList.remove('low', 'charging');
+    batBolt.classList.add('hidden');
+    return;
+  }
+  const lv = Math.max(0, Math.min(100, level));
+  batText.textContent = lv + '%';
+  batFill.setAttribute('width', String(Math.round(19 * lv / 100))); // lebar isi maks 19
+  batBar.classList.toggle('charging', !!charging);
+  batBar.classList.toggle('low', !charging && lv <= 15);
+  batBolt.classList.toggle('hidden', !charging);
+  batBar.title = 'Baterai HP: ' + lv + '%' + (charging ? ' (mengisi)' : '');
+}
+
+window.api.onMirrorBattery(({ serial, level, charging }) => {
+  if (mirrorSerial && serial !== mirrorSerial) return;
+  setBattery(level, charging);
+});
+
 window.api.onLog(({ text, isErr }) => {
   // surface only meaningful backend errors as toasts here; full log lives in the main window
   if (isErr) showToast(text, true);
@@ -60,6 +91,7 @@ window.api.onMirrorStopped(() => {
   noSignal.style.display = 'flex';
   noSignal.classList.add('stopped');
   noSignalHint.textContent = 'mirror dihentikan';
+  setBattery(null, false);
   canvas.style.display = 'none';
   closeAudio();
 });

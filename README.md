@@ -28,12 +28,37 @@ npm run build    # hasil: src-tauri/target/release/scrctl.exe + installer di bun
 
 Kalau `platform-tools` kosong, app memakai `adb` dari PATH.
 
+## SCRCTL Link (app Android pendamping)
+
+App kecil di `android/` (Kotlin + Jetpack Compose) yang tersambung ke SCRCTL lewat WiFi,
+tanpa kabel dan tanpa adb. Server-nya ada di `src-tauri/src/link.rs` (port TCP 5588).
+
+Fitur:
+- **Notifikasi HP → PC** (muncul di halaman Notifikasi). Butuh izin "Akses notifikasi" di HP.
+- **Clipboard dua arah**. PC → HP otomatis. HP → PC lewat tombol "Kirim clipboard" atau menu Bagikan,
+  karena Android 10+ melarang app background membaca clipboard.
+- **Kirim file** HP ↔ PC. File dari HP masuk ke `Downloads\SCRCTL`, file dari PC masuk ke `Download/SCRCTL` di HP.
+- **Baterai HP** live, plus kontrol cepat dari PC: senter, volume, mute, Jangan Ganggu, cari HP.
+
+Cara pakai: buka menu **Link HP** di SCRCTL, install APK di HP, isi alamat dan kode yang tampil.
+
+Keamanan: kode tidak dikirim lewat jaringan (handshake HMAC-SHA256), tapi isi data **belum dienkripsi**.
+Pakai di WiFi yang kamu percaya. Windows bisa minta izin firewall saat pertama jalan.
+
+### Build APK lewat GitHub Actions
+
+Push ke GitHub, tab **Actions → Build Android APK** (atau *Run workflow*), lalu ambil
+**Artifacts → SCRCTL-Link** (`SCRCTL-Link.apk`). Tag `v*` otomatis melampirkan APK ke Releases.
+APK ditandatangani debug key, jadi bisa langsung di-install; Play Protect mungkin menanyakan konfirmasi.
+
 ## Struktur
 
 - `src-tauri/src/main.rs` — semua backend: adb, client scrcpy (video/audio/control), UHID, clipboard, notifikasi HP, setelan, window.
 - `src-tauri/resources/scrcpy-server.jar` — server resmi scrcpy v4.1 (Apache 2.0), di-embed ke exe.
 - `renderer/` — UI (HTML/CSS/JS). `tauri-shim.js` = jembatan ke Rust.
-- `.github/workflows/build-windows.yml` — build otomatis.
+- `src-tauri/src/link.rs` — server SCRCTL Link (HP ↔ PC).
+- `android/` — app Android SCRCTL Link.
+- `.github/workflows/build-windows.yml`, `build-apk.yml` — build otomatis.
 
 ## Beda dengan versi Electron
 

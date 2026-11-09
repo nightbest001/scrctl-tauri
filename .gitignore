@@ -7,3 +7,10 @@ src-tauri/resources/platform-tools/*
 !src-tauri/resources/platform-tools/README.txt
 portable/
 *.zip
+
+# Android (SCRCTL Link)
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+*.apk

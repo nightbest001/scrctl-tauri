@@ -30,6 +30,14 @@ svg { width:100%; height:100%; fill:none; stroke:currentColor; stroke-width:2; s
 .win-btn:hover { background:var(--card-2); color:#fff; }
 .win-btn.close:hover { background:var(--red); }
 
+/* Strip baterai HP di atas toolbar */
+.batbar { flex-shrink:0; display:flex; align-items:center; justify-content:center; gap:6px; height:20px; background:var(--bg); color:var(--text-2); font-size:11px; font-weight:700; letter-spacing:.02em; -webkit-app-region:drag; user-select:none; border-bottom:1px solid rgba(255,255,255,.04); }
+.bat-ico { width:22px; height:11px; stroke-width:1.6; }
+.bat-fill { fill:currentColor; stroke:none; transition:width .3s, fill .3s; }
+.batbar.low { color:var(--red); }
+.batbar.charging { color:var(--green); }
+.bat-bolt { font-size:11px; line-height:1; }
+
 body.viewonly .needs-control { display:none; }
 
 .stage { flex:1; min-height:0; position:relative; background:#000; display:flex; align-items:center; justify-content:center; overflow:hidden; }

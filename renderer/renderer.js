@@ -81,7 +81,7 @@ $('winClose').addEventListener('click', () => window.api.windowClose());
 // ---------------------------------------------------------------------------
 // Navigasi
 // ---------------------------------------------------------------------------
-const PAGE_TITLES = { home: 'Beranda', notif: 'Notifikasi', setup: 'Setup', settings: 'Setelan', log: 'Log' };
+const PAGE_TITLES = { home: 'Beranda', notif: 'Notifikasi', link: 'Link HP', setup: 'Setup', settings: 'Setelan', log: 'Log' };
 
 function showPage(name) {
   currentPage = name;
@@ -93,6 +93,7 @@ function showPage(name) {
   if (name === 'log') $('logDot').classList.add('hidden');
   if (name === 'settings') renderSettings();
   if (name === 'notif') { unreadNotif = 0; renderNotifs(); }
+  if (name === 'link') refreshLink();
   updateNotifBadge();
 }
 document.querySelectorAll('.nav-item').forEach((b) => b.addEventListener('click', () => showPage(b.dataset.page)));
@@ -673,6 +674,62 @@ async function checkUpdate() {
 }
 
 // ---------------------------------------------------------------------------
+// Link HP (app Android SCRCTL Link): baterai, kontrol cepat, kirim file
+// ---------------------------------------------------------------------------
+let linkInfo = { connected: false };
+let linkFinding = false;
+
+function applyLink(next) {
+  linkInfo = Object.assign({}, linkInfo, next);
+  const i = linkInfo;
+  if (i.ip) $('linkAddr').textContent = `${i.ip}:${i.port}`;
+  if (i.token) $('linkToken').textContent = i.token.slice(0, 4) + '-' + i.token.slice(4);
+  const st = $('linkStatus');
+  st.textContent = i.connected ? `Terhubung: ${i.name}` : 'menunggu HP…';
+  st.classList.toggle('link-ok', !!i.connected);
+  let bat = 'Baterai: -';
+  if (i.connected && i.battery != null) bat = `Baterai HP: ${i.battery}%${i.charging ? ' ⚡ mengisi' : ''}`;
+  $('linkBattery').textContent = bat;
+  document.querySelectorAll('[data-link]').forEach((b) => { b.disabled = !i.connected; });
+  $('linkTorch').classList.toggle('on', !!i.torch);
+  $('linkDnd').classList.toggle('on', !!i.dnd);
+  $('linkFind').classList.toggle('on', linkFinding && !!i.connected);
+  if (!i.connected) linkFinding = false;
+}
+
+async function refreshLink() {
+  try { applyLink(await window.api.linkInfo()); } catch (e) { /* belum siap */ }
+}
+
+window.api.onLinkState((s) => applyLink(s));
+window.api.onLinkEvent(({ text, err }) => { addLog('Link: ' + text, err); toast(text, err); });
+
+const linkBtn = (id, cmd, on) => $(id).addEventListener('click', () => window.api.linkCmd(cmd, on));
+linkBtn('linkTorch', 'flashlight');
+linkBtn('linkDnd', 'dnd');
+linkBtn('linkVolDown', 'vol_down');
+linkBtn('linkVolUp', 'vol_up');
+linkBtn('linkMute', 'mute');
+$('linkFind').addEventListener('click', () => {
+  linkFinding = !linkFinding;
+  window.api.linkCmd('find', linkFinding);
+  applyLink({});
+});
+$('linkSendFile').addEventListener('click', async () => {
+  const r = await window.api.linkSendFile();
+  if (r && r.err) toast(r.err, true);
+});
+$('linkCopy').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText($('linkAddr').textContent); toast('Alamat disalin'); } catch (e) { toast('Gagal menyalin', true); }
+});
+$('linkRegen').addEventListener('click', async () => {
+  const ok = await window.api.confirmDialog({ title: 'Kode baru', message: 'HP yang sedang terhubung akan terputus dan harus pakai kode baru.', detail: '' });
+  if (!ok) return;
+  applyLink(await window.api.linkRegen());
+  toast('Kode baru dibuat');
+});
+
+// ---------------------------------------------------------------------------
 // Init
 // ---------------------------------------------------------------------------
 (async () => {
@@ -682,6 +739,7 @@ async function checkUpdate() {
   settings = await window.api.getSettings();
   settingsDefaults = await window.api.getDefaultSettings();
   showPage('home');
+  refreshLink();
   updateNotifBadge();
   render();
   checkUpdate();

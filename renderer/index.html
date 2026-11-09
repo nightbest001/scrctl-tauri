@@ -31,6 +31,10 @@
       <span>Notifikasi</span>
       <i class="badge-count hidden" id="notifBadge">0</i>
     </button>
+    <button class="nav-item" data-page="link">
+      <svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.07 0l-3 3a5 5 0 0 0 7.07 7.07l1.7-1.7"/></svg>
+      <span>Link HP</span>
+    </button>
     <button class="nav-item" data-page="setup">
       <svg viewBox="0 0 24 24"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1"/></svg>
       <span>Setup</span>
@@ -45,7 +49,7 @@
       <i class="badge-dot hidden" id="logDot"></i>
     </button>
     <div class="nav-spacer"></div>
-    <div class="nav-foot" id="navVer" title="scrcpy server v4.1">v0.3.1</div>
+    <div class="nav-foot" id="navVer" title="scrcpy server v4.1">v0.4.0</div>
   </nav>
 
   <main class="content">
@@ -102,6 +106,44 @@
         <button class="btn ghost" id="clearNotif">Bersihkan</button>
       </div>
       <div class="notif-list" id="notifList"></div>
+    </section>
+
+    <!-- ===================== LINK HP ===================== -->
+    <section class="page hidden" id="page-link">
+      <div class="two-col">
+
+        <div class="card">
+          <div class="card-head"><span class="step">1</span><div><h3>Sambungkan HP</h3><p id="linkStatus">menunggu HP…</p></div></div>
+          <ol class="hint">
+            <li>Install <b>SCRCTL Link</b> (APK) di HP, satu WiFi dengan PC</li>
+            <li>Isi alamat dan kode ini di app, lalu tekan Hubungkan</li>
+          </ol>
+          <label class="lbl">Alamat PC</label>
+          <div class="link-code" id="linkAddr">-</div>
+          <label class="lbl">Kode</label>
+          <div class="link-code" id="linkToken">-</div>
+          <div class="link-row">
+            <button class="btn ghost" id="linkCopy">Salin alamat</button>
+            <button class="btn ghost" id="linkRegen">Kode baru</button>
+          </div>
+          <p class="muted link-note">Windows bisa menanyakan izin firewall saat pertama jalan: izinkan di jaringan privat. Data belum dienkripsi, pakai di WiFi yang kamu percaya.</p>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><span class="step">2</span><div><h3>Kontrol HP</h3><p id="linkBattery">Baterai: -</p></div></div>
+          <div class="link-grid">
+            <button class="btn" id="linkTorch" data-link>Senter</button>
+            <button class="btn" id="linkDnd" data-link>Jangan Ganggu</button>
+            <button class="btn" id="linkVolDown" data-link>Volume −</button>
+            <button class="btn" id="linkVolUp" data-link>Volume +</button>
+            <button class="btn" id="linkMute" data-link>Mute</button>
+            <button class="btn" id="linkFind" data-link>Cari HP</button>
+          </div>
+          <button class="btn primary wide" id="linkSendFile" data-link>Kirim file ke HP</button>
+          <p class="muted link-note">Notifikasi HP muncul di halaman Notifikasi. Clipboard sinkron otomatis. File dari HP masuk ke Downloads\SCRCTL.</p>
+        </div>
+
+      </div>
     </section>
 
     <!-- ===================== SETUP ===================== -->

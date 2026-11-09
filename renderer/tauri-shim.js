@@ -61,6 +61,13 @@
     onMirrorSession: function (cb) { h.session.push(cb); },
     onMirrorPacket: function (cb) { h.packet.push(cb); },
     onMirrorAudio: function (cb) { h.audio.push(cb); },
+    linkInfo: function () { return invoke('link_info'); },
+    linkRegen: function () { return invoke('link_regen'); },
+    linkCmd: function (cmd, on) { return invoke('link_cmd', { cmd: cmd, on: on === undefined ? null : on }); },
+    linkSendFile: function () { return invoke('link_send_file'); },
+    onLinkState: function (cb) { listen('link-state', cb); },
+    onLinkEvent: function (cb) { listen('link-event', cb); },
+    onMirrorBattery: function (cb) { listen('mirror-battery', cb); },
     onMirrorStopped: function (cb) { listen('mirror-stopped', function () { cb(); }); }
   };
 
@@ -77,7 +84,7 @@
     if (e.button !== 0) return;
     var t = e.target;
     if (!t || !t.closest) return;
-    if (!t.closest('.titlebar, .toolbar')) return;
+    if (!t.closest('.titlebar, .toolbar, .batbar')) return;
     if (t.closest('button, input, select, textarea, a, .tb-ctl, .tb-winctl, .tb-group')) return;
     if (e.detail === 2) fire('window_maximize'); else fire('window_drag');
   });

@@ -235,3 +235,12 @@ select option { background:#1f2025; }
 .notif .n-x svg { width:12px; height:12px; stroke-width:2.4; }
 .notif:hover .n-x { opacity:1; }
 .notif .n-x:hover { background:var(--card-2); color:#fff; }
+
+/* ---- Link HP ---- */
+.link-code { font-size:24px; font-weight:800; letter-spacing:.1em; padding:10px 14px; border-radius:var(--radius); background:var(--card); user-select:text; margin-bottom:4px; }
+.link-row { display:flex; gap:8px; margin-top:12px; }
+.link-row .btn { flex:1; }
+.link-grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; }
+.link-grid .btn.on { background:var(--blue); }
+.link-note { margin:12px 0 0; font-size:12px; line-height:1.45; }
+.link-ok { color:var(--green-2); }

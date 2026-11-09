@@ -31,6 +31,8 @@ use tokio::net::TcpStream;
 use tokio::process::Command;
 use tokio::sync::{mpsc, oneshot, Mutex as AsyncMutex};
 
+mod link;
+
 macro_rules! args {
     ($($x:expr),* $(,)?) => {
         vec![$($x.to_string()),*]
@@ -1622,6 +1624,42 @@ async fn mirror_start(app: AppHandle, serial: String, device_name: Option<String
         }
     }
 
+    // baterai HP: poll `dumpsys battery` selama sesi, kirim ke window mirror.
+    // Task ini ikut di-abort lewat `tasks` saat sesi berhenti.
+    {
+        let app_b = app.clone();
+        let serial_b = serial.clone();
+        tasks.push(tauri::async_runtime::spawn(async move {
+            let re_level = Regex::new(r"(?m)^\s*level:\s*(\d+)").unwrap();
+            let re_status = Regex::new(r"(?m)^\s*status:\s*(\d+)").unwrap();
+            let re_power = Regex::new(r"(?mi)^\s*(?:AC|USB|Wireless|Dock) powered:\s*true").unwrap();
+            tokio::time::sleep(Duration::from_millis(2500)).await; // tunggu window siap
+            loop {
+                let res = run_cmd(&app_b, args!["-s", &serial_b, "shell", "dumpsys", "battery"]).await;
+                if res.ok {
+                    let level = re_level
+                        .captures(&res.out)
+                        .and_then(|c| c.get(1))
+                        .and_then(|m| m.as_str().parse::<u32>().ok());
+                    let status = re_status
+                        .captures(&res.out)
+                        .and_then(|c| c.get(1))
+                        .and_then(|m| m.as_str().parse::<u32>().ok())
+                        .unwrap_or(0);
+                    if let Some(level) = level {
+                        // status 2 = charging, 5 = full (masih colok)
+                        let charging = status == 2 || status == 5 || re_power.is_match(&res.out);
+                        let _ = app_b.emit(
+                            "mirror-battery",
+                            json!({ "serial": serial_b, "level": level, "charging": charging }),
+                        );
+                    }
+                }
+                tokio::time::sleep(Duration::from_secs(20)).await;
+            }
+        }));
+    }
+
     // penerus paket ke window mirror: menunggu window attach dulu supaya
     // config + keyframe awal tidak hilang.
     {
@@ -1742,6 +1780,7 @@ fn main() {
             let data_dir = app.path().app_data_dir()?;
             let _ = std::fs::create_dir_all(&data_dir);
             let adb = find_adb(app.handle());
+            app.manage(link::init(&data_dir));
             app.manage(AppState {
                 data_dir,
                 adb,
@@ -1755,8 +1794,12 @@ fn main() {
                 notif: Mutex::new(NotifState::default()),
             });
             let handle = app.handle().clone();
+            let handle_link = handle.clone();
             tauri::async_runtime::spawn(async move {
                 notif_loop(handle).await;
+            });
+            tauri::async_runtime::spawn(async move {
+                link::serve(handle_link).await;
             });
             Ok(())
         })
@@ -1808,6 +1851,10 @@ fn main() {
             mirror_toggle_fullscreen,
             mirror_focus,
             mirror_install_file,
+            link::link_info,
+            link::link_regen,
+            link::link_cmd,
+            link::link_send_file,
         ])
         .run(tauri::generate_context!())
         .expect("gagal menjalankan SCRCTL");
