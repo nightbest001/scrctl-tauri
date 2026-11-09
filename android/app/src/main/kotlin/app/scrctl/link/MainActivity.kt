@@ -36,6 +36,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.darkColorScheme
@@ -308,7 +309,9 @@ class MainActivity : ComponentActivity() {
                     )
                 }
                 val camOk = ctx.checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
-                PermRow("Kamera (buka kamera HP dari PC)", camOk) { askCamera.launch(Manifest.permission.CAMERA) }
+                AllowRow("Kamera (buka kamera HP dari PC)", camOk, "camera", { askCamera.launch(Manifest.permission.CAMERA) }) { on ->
+                    if (!on) LinkHub.client?.features?.camera?.let { it.stop(); it.pushState("off") }
+                }
                 PermRow("Bebas hemat baterai (koneksi tidak diputus)", battery) {
                     open(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, true)
                 }
@@ -338,6 +341,27 @@ private fun Panel(content: @Composable () -> Unit) {
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) { content() }
+    }
+}
+
+/** Baris izin: belum diizinkan -> tombol Izinkan. Sudah diizinkan -> toggle nyala/mati (izin Android tetap aktif). */
+@Composable
+private fun AllowRow(label: String, granted: Boolean, key: String, onAsk: () -> Unit, onToggle: (Boolean) -> Unit) {
+    val ctx = LocalContext.current
+    var on by remember { mutableStateOf(Prefs.allow(ctx, key)) }
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Text(label, fontSize = 13.sp, modifier = Modifier.weight(1f).padding(end = 8.dp))
+        if (!granted) {
+            Button(onClick = onAsk, colors = ButtonDefaults.buttonColors(containerColor = Blue)) { Text("Izinkan") }
+        } else {
+            Text(if (on) "Aktif" else "Mati", color = if (on) Green else Dim, fontWeight = FontWeight.Bold, fontSize = 13.sp,
+                modifier = Modifier.padding(end = 8.dp))
+            Switch(checked = on, onCheckedChange = { on = it; Prefs.setAllow(ctx, key, it); onToggle(it) })
+        }
     }
 }
 

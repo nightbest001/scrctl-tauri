@@ -14,6 +14,10 @@ object Prefs {
         sp(c).edit().putString("host", host).putInt("port", port).putString("token", token).apply()
     }
 
+    /** Toggle di app HP: boleh tidaknya PC memakai kamera (default boleh). */
+    fun allow(c: Context, key: String): Boolean = sp(c).getBoolean("allow_$key", true)
+    fun setAllow(c: Context, key: String, on: Boolean) { sp(c).edit().putBoolean("allow_$key", on).apply() }
+
     fun setEnabled(c: Context, on: Boolean) {
         sp(c).edit().putBoolean("enabled", on).apply()
     }

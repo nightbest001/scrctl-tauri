@@ -46,6 +46,13 @@ struct Cfg {
     port: u16,
 }
 
+fn save_cfg(path: &Path, c: &Cfg) {
+    write_json(
+        path,
+        &json!({ "token": c.token, "port": c.port }),
+    );
+}
+
 #[derive(Default, Clone)]
 struct Peer {
     connected: bool,
@@ -118,12 +125,17 @@ pub fn init(data_dir: &Path) -> LinkState {
         .map(|p| p as u16)
         .filter(|p| *p >= 1024)
         .unwrap_or(DEFAULT_PORT);
+    let mut dirty = false;
     if token.len() != 8 {
         token = gen_token();
-        write_json(&path, &json!({ "token": token, "port": port }));
+        dirty = true;
+    }
+    let cfg = Cfg { token, port };
+    if dirty {
+        save_cfg(&path, &cfg);
     }
     LinkState {
-        cfg: Mutex::new(Cfg { token, port }),
+        cfg: Mutex::new(cfg),
         peer: Mutex::new(Peer::default()),
         tx: Mutex::new(None),
         kick: Mutex::new(None),
@@ -629,7 +641,8 @@ pub fn link_regen(app: AppHandle) -> Value {
             c.port
         };
         let dir = app.state::<AppState>().data_dir.clone();
-        write_json(&dir.join("link.json"), &json!({ "token": token, "port": port }));
+        let c = ls.cfg.lock().unwrap();
+        save_cfg(&dir.join("link.json"), &c);
         let kick = ls.kick.lock().unwrap().take();
         if let Some(k) = kick {
             let _ = k.send(()); // HP lama harus pairing ulang dengan kode baru

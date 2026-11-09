@@ -65,6 +65,7 @@ class PhoneCamera(
     @SuppressLint("MissingPermission")
     private fun start(face: String) {
         stop()
+        if (!Prefs.allow(ctx, "camera")) { pushState("off"); return }
         if (!allowed()) { pushState("perm"); return }
         try {
             val want = if (face == "front") CameraCharacteristics.LENS_FACING_FRONT else CameraCharacteristics.LENS_FACING_BACK

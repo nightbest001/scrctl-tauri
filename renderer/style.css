@@ -505,3 +505,4 @@ select option { background:#1f2025; }
 .cam-stage.live .cam-empty { display:none; }
 .cam-seg { display:flex; gap:8px; margin-top:12px; }
 .cam-seg .btn.active { background:var(--blue); color:#fff; }
+
