@@ -23,11 +23,18 @@ class Features(
     val apps = PhoneApps(this.ctx, scope, post)
     val camera = PhoneCamera(this.ctx, post, sendFrame)
 
+    private fun featuresOn() = Prefs.allow(ctx, "features")
+
+    /** Toggle di app HP: Pesan/Telepon/Foto boleh dipakai PC atau tidak. */
+    fun setFeaturesAllowed(on: Boolean) {
+        if (on) { sms.start(); calls.start() } else { sms.stop(); calls.stop() }
+        pushCaps()
+    }
+
     fun onConnected() {
         media.start()
         media.resend()
-        sms.start()
-        calls.start()
+        if (featuresOn()) { sms.start(); calls.start() }
         pushCaps()
     }
 
@@ -42,26 +49,27 @@ class Features(
     fun handle(o: JSONObject): Boolean {
         when (o.optString("t")) {
             "mcmd" -> media.command(o)
-            "sms" -> sms.handle(o)
-            "calls" -> calls.handle(o)
-            "photos" -> photos.handle(o)
+            "sms" -> if (featuresOn()) sms.handle(o)
+            "calls" -> if (featuresOn()) calls.handle(o)
+            "photos" -> if (featuresOn()) photos.handle(o)
             "apps" -> apps.handle(o)
             "cam" -> camera.handle(o)
-            "caps" -> { sms.start(); calls.start(); pushCaps() }
+            "caps" -> { if (featuresOn()) { sms.start(); calls.start() }; pushCaps() }
             else -> return false
         }
         return true
     }
 
     private fun pushCaps() {
+        val f = featuresOn()
         post(
             JSONObject().put("t", "caps")
-                .put("sms", sms.allowed())
-                .put("smsSend", sms.canSend())
-                .put("callLog", calls.logAllowed())
-                .put("call", calls.canCall())
-                .put("photos", photos.allowed())
-                .put("contacts", Contacts.has(ctx, Manifest.permission.READ_CONTACTS))
+                .put("sms", f && sms.allowed())
+                .put("smsSend", f && sms.canSend())
+                .put("callLog", f && calls.logAllowed())
+                .put("call", f && calls.canCall())
+                .put("photos", f && photos.allowed())
+                .put("contacts", f && Contacts.has(ctx, Manifest.permission.READ_CONTACTS))
                 .put("camera", camera.allowed())
                 .put("sdk", Build.VERSION.SDK_INT)
         )

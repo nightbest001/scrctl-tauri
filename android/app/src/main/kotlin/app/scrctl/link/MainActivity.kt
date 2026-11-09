@@ -299,8 +299,10 @@ class MainActivity : ComponentActivity() {
                     if (Build.VERSION.SDK_INT >= 33) askNotif.launch(Manifest.permission.POST_NOTIFICATIONS)
                 }
                 val featuresOk = featurePerms().all { ctx.checkSelfPermission(it) == PackageManager.PERMISSION_GRANTED }
-                PermRow("Pesan, kontak, telepon, foto (halaman Pesan/Telepon/Foto di PC)", featuresOk) {
+                AllowRow("Pesan, kontak, telepon, foto (halaman Pesan/Telepon/Foto di PC)", featuresOk, "features", {
                     askFeatures.launch(featurePerms())
+                }) { on ->
+                    LinkHub.client?.features?.setFeaturesAllowed(on)
                 }
                 if (!featuresOk) {
                     Text(
