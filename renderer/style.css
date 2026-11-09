@@ -108,8 +108,6 @@ svg .fill { fill:currentColor; stroke:none; }
 .banner-sub { font-size:12px; color:var(--text-2); margin-top:3px; max-width:620px; line-height:1.45; }
 .banner.ok .banner-title::before { content:''; display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--green-2); margin-right:8px; }
 
-.banner.update { margin:0 20px 12px 8px; box-shadow:inset 0 0 0 1px var(--blue); }
-.banner-actions { display:flex; gap:8px; flex-shrink:0; }
 
 /* ---------- Buttons ---------- */
 .btn { border:0; border-radius:var(--radius); height:34px; padding:0 16px; font-size:13px; font-weight:700; cursor:pointer; background:var(--card-2); color:#fff; transition:filter .12s, background .12s; }
@@ -244,3 +242,40 @@ select option { background:#1f2025; }
 .link-grid .btn.on { background:var(--blue); }
 .link-note { margin:12px 0 0; font-size:12px; line-height:1.45; }
 .link-ok { color:var(--green-2); }
+
+/* ---------- Layar pembuka (cek / download update) ---------- */
+.launch { position:fixed; left:0; right:0; top:32px; bottom:0; z-index:50; display:flex; align-items:center; justify-content:center;
+  background:radial-gradient(120% 90% at 50% 0%, #26272d 0%, var(--bg) 62%); transition:opacity .26s ease; }
+.launch.out { opacity:0; pointer-events:none; }
+.lc-card { position:relative; width:min(640px, calc(100% - 48px)); min-height:450px; padding:36px 40px 28px; display:flex; flex-direction:column;
+  border-radius:14px; background:rgba(31,32,37,.94); box-shadow:inset 0 0 0 1px rgba(255,255,255,.07), 0 24px 80px rgba(0,0,0,.55); }
+.lc-x { position:absolute; top:22px; right:24px; width:32px; height:32px; border:0; border-radius:8px; background:transparent; color:var(--text-3); cursor:pointer; display:grid; place-items:center; }
+.lc-x:hover { color:#fff; background:var(--card-2); }
+.lc-x svg { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; }
+.lc-title { margin:0; font-size:34px; line-height:1.15; font-weight:700; letter-spacing:-.01em; }
+.lc-sub { margin-top:8px; font-size:14px; color:var(--text-3); }
+.lc-body { flex:1; display:flex; align-items:center; padding:26px 0 22px; }
+.lc-state { display:none; align-items:center; gap:16px; }
+.lc-state.col { flex-direction:column; align-items:flex-start; gap:22px; }
+.launch[data-s="check"] #lcCheck, .launch[data-s="found"] #lcFound, .launch[data-s="error"] #lcFound { display:flex; }
+.launch[data-s="dl"] #lcDl { display:flex; }
+.launch[data-s="dl"] .lc-x { display:none; }
+.lc-ico { width:48px; height:48px; flex-shrink:0; border-radius:50%; background:var(--card-2); display:grid; place-items:center; }
+.lc-ico svg { width:22px; height:22px; fill:none; stroke:#fff; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.lc-ico.spin svg { animation:lcNudge 1.3s ease-in-out infinite; }
+@keyframes lcNudge { 0%,100% { transform:translate(-2px,2px); opacity:.6; } 50% { transform:translate(2px,-2px); opacity:1; } }
+.lc-h { font-size:20px; font-weight:700; }
+.lc-p { margin-top:4px; font-size:14px; color:var(--text-3); }
+.lc-actions { display:none; justify-content:flex-end; gap:10px; margin-bottom:18px; }
+.launch[data-s="found"] .lc-actions, .launch[data-s="error"] .lc-actions { display:flex; }
+.lc-actions .btn { height:40px; padding:0 20px; }
+.lc-dots { display:grid; grid-template-columns:repeat(12, 16px); gap:20px; }
+.lc-dots i { width:16px; height:16px; border-radius:50%; background:#34353b; transition:background .25s; }
+.lc-dots i.done { background:#6a6b72; }
+.lc-dots i.end { background:#f2f2f4; }
+.lc-dots i.cur { background:#fff; box-shadow:0 0 0 4px rgba(255,255,255,.12); animation:lcPulse 1s ease-in-out infinite; }
+@keyframes lcPulse { 50% { box-shadow:0 0 0 7px rgba(255,255,255,0); } }
+.lc-stat { font-size:24px; font-weight:700; letter-spacing:-.01em; }
+.lc-stat .at { font-size:14px; font-weight:500; color:var(--text-3); margin:0 4px 0 6px; }
+.lc-stat .spd { color:var(--text-3); font-weight:600; }
+.lc-foot { font-size:12px; color:var(--text-3); line-height:1.6; }

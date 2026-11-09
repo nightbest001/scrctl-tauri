@@ -49,7 +49,7 @@
       <i class="badge-dot hidden" id="logDot"></i>
     </button>
     <div class="nav-spacer"></div>
-    <div class="nav-foot" id="navVer" title="scrcpy server v4.1">v0.4.0</div>
+    <div class="nav-foot" id="navVer" title="scrcpy server v4.1">v0.4.2</div>
   </nav>
 
   <main class="content">
@@ -68,18 +68,6 @@
         </div>
       </div>
     </header>
-
-    <!-- Banner update (muncul kalau ada versi baru di GitHub Releases) -->
-    <div class="banner update hidden" id="updateBanner">
-      <div>
-        <div class="banner-title" id="updateTitle">Versi baru tersedia</div>
-        <div class="banner-sub" id="updateSub"></div>
-      </div>
-      <div class="banner-actions">
-        <button class="btn ghost" id="updateLater">Nanti</button>
-        <button class="btn primary" id="updateGo">Download</button>
-      </div>
-    </div>
 
     <!-- ===================== BERANDA ===================== -->
     <section class="page" id="page-home">
@@ -199,6 +187,36 @@
     </section>
 
   </main>
+</div>
+
+<!-- Layar pembuka: cek update, lalu download update -->
+<div class="launch" id="launch" data-s="check">
+  <div class="lc-card">
+    <button class="lc-x" id="lcClose" title="Tutup"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    <h1 class="lc-title" id="lcTitle">Membuka SCRCTL</h1>
+    <div class="lc-sub" id="lcSub">SCRCTL untuk Windows</div>
+
+    <div class="lc-body">
+      <div class="lc-state" id="lcCheck">
+        <div class="lc-ico spin"><svg viewBox="0 0 24 24"><path d="M7 17 17 7M8 7h9v9"/></svg></div>
+        <div><div class="lc-h">Memeriksa update</div><div class="lc-p">Sebentar saja.</div></div>
+      </div>
+      <div class="lc-state" id="lcFound">
+        <div class="lc-ico"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg></div>
+        <div><div class="lc-h" id="lcFoundH">Versi baru tersedia</div><div class="lc-p" id="lcFoundP"></div></div>
+      </div>
+      <div class="lc-state col" id="lcDl">
+        <div class="lc-dots" id="lcDots"></div>
+        <div class="lc-stat" id="lcStat"></div>
+      </div>
+    </div>
+
+    <div class="lc-actions">
+      <button class="btn ghost" id="lcSkip">Lewati</button>
+      <button class="btn primary" id="lcGo">Download update baru</button>
+    </div>
+    <div class="lc-foot">SCRCTL &middot; scrcpy server v4.1</div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>

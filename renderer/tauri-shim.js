@@ -52,6 +52,9 @@
     getPathForFile: function () { return ''; },
     getAppVersion: function () { return T.app.getVersion(); },
     openUrl: function (url) { return invoke('open_url', { url: url }); },
+    downloadUpdate: function (url, total) { return invoke('update_download', { url: url, total: total }); },
+    installUpdate: function () { return invoke('update_install'); },
+    onUpdateProgress: function (cb) { listen('update-progress', cb); },
     installFile: function (filePath) { return invoke('mirror_install_file', { filePath: filePath }); },
 
     watchNotifications: function (list) { return invoke('notif_watch', { list: list }); },

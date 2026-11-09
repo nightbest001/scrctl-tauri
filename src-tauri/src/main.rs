@@ -498,6 +498,68 @@ async fn open_url(url: String) -> Result<(), String> {
     Ok(())
 }
 
+// Download installer update ke folder temp (pakai curl.exe bawaan Windows 10/11).
+// Kirim event "update-progress" {done,total} tiap 300 ms.
+#[tauri::command]
+async fn update_download(app: AppHandle, url: String, total: u64) -> Result<(), String> {
+    let bad = url.chars().any(|c| c.is_whitespace() || "&^\"<>|%".contains(c));
+    if !url.starts_with("https://github.com/nightbest001/scrctl-tauri/releases/download/")
+        || !url.ends_with(".exe")
+        || bad
+    {
+        return Err("url ditolak".into());
+    }
+    let path = std::env::temp_dir().join("SCRCTL-update-setup.exe");
+    let _ = std::fs::remove_file(&path);
+    let mut cmd = Command::new("curl.exe");
+    cmd.args(["-L", "--fail", "-sS", "-o"])
+        .arg(&path)
+        .arg(url.as_str())
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .kill_on_drop(true);
+    #[cfg(windows)]
+    cmd.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
+    let mut child = cmd.spawn().map_err(|e| format!("curl tidak bisa jalan: {e}"))?;
+    loop {
+        match child.try_wait() {
+            Ok(Some(st)) => {
+                if !st.success() {
+                    return Err("download gagal".into());
+                }
+                break;
+            }
+            Ok(None) => {
+                let done = std::fs::metadata(&path).map(|m| m.len()).unwrap_or(0);
+                let _ = app.emit("update-progress", json!({ "done": done, "total": total }));
+                tokio::time::sleep(Duration::from_millis(300)).await;
+            }
+            Err(e) => return Err(e.to_string()),
+        }
+    }
+    let _ = app.emit("update-progress", json!({ "done": total, "total": total }));
+    Ok(())
+}
+
+// Jalankan installer yang sudah di-download, lalu tutup app supaya file tidak terkunci.
+#[tauri::command]
+async fn update_install(app: AppHandle) -> Result<(), String> {
+    let path = std::env::temp_dir().join("SCRCTL-update-setup.exe");
+    if !path.exists() {
+        return Err("file update tidak ada".into());
+    }
+    #[cfg(windows)]
+    {
+        let mut cmd = Command::new(&path);
+        cmd.stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null());
+        cmd.spawn().map_err(|e| e.to_string())?;
+    }
+    tokio::time::sleep(Duration::from_millis(500)).await;
+    app.exit(0);
+    Ok(())
+}
+
 #[tauri::command]
 fn notify_desktop(app: AppHandle, title: String, body: String) {
     let _ = app.notification().builder().title(title).body(body).show();
@@ -1824,6 +1886,8 @@ fn main() {
             dialog_confirm,
             notify_desktop,
             open_url,
+            update_download,
+            update_install,
             window_minimize,
             window_maximize,
             window_drag,

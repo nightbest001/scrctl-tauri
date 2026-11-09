@@ -648,29 +648,109 @@ function isNewerVer(a, b) {
   }
   return false;
 }
-async function checkUpdate() {
+const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
+const LC_DOTS = 72;
+let lcDotIdx = -1, lcHooked = false, lcLast = { t: 0, b: 0, spd: 0 };
+
+function lcState(s, title, sub) {
+  $('launch').dataset.s = s;
+  if (title != null) $('lcTitle').textContent = title;
+  if (sub != null) $('lcSub').textContent = sub;
+}
+function lcClose() {
+  const L = $('launch');
+  L.classList.add('out');
+  setTimeout(() => L.classList.add('hidden'), 280);
+}
+function lcBuildDots() {
+  const box = $('lcDots');
+  box.innerHTML = '';
+  for (let i = 0; i < LC_DOTS; i++) box.appendChild(document.createElement('i'));
+  box.lastChild.classList.add('end');
+  lcDotIdx = -1;
+}
+function lcStat(done, total, mbps) {
+  const mb = (n) => (n / 1048576).toFixed(1);
+  $('lcStat').innerHTML = `${mb(done)} MB / ${mb(total)} MB <span class="at">@</span> <span class="spd">${mbps.toFixed(1)} Mbps</span>`;
+}
+function lcProgress(done, total, mbps) {
+  lcStat(done, total, mbps);
+  const idx = Math.min(LC_DOTS - 1, Math.floor((done / (total || 1)) * LC_DOTS));
+  if (idx === lcDotIdx) return;
+  lcDotIdx = idx;
+  const dots = $('lcDots').children;
+  for (let i = 0; i < dots.length; i++) {
+    dots[i].classList.toggle('done', i < idx);
+    dots[i].classList.toggle('cur', i === idx && i < LC_DOTS - 1);
+  }
+}
+
+async function lcStartDownload(rel, asset) {
+  lcState('dl', 'Mengunduh dan memasang', `SCRCTL untuk Windows | ${rel.tag_name}`);
+  lcBuildDots();
+  lcStat(0, asset.size, 0);
+  lcProgress(0, asset.size, 0);
+  lcLast = { t: Date.now(), b: 0, spd: 0 };
+  if (!lcHooked) {
+    lcHooked = true;
+    window.api.onUpdateProgress((p) => {
+      if (!p || !p.total) return;
+      const now = Date.now(), dt = (now - lcLast.t) / 1000;
+      if (dt >= 0.25) {
+        const inst = ((p.done - lcLast.b) * 8) / 1e6 / dt;
+        lcLast.spd = lcLast.spd ? lcLast.spd * 0.6 + inst * 0.4 : inst;
+        lcLast.t = now; lcLast.b = p.done;
+      }
+      lcProgress(p.done, p.total, lcLast.spd);
+    });
+  }
   try {
-    const cur = await window.api.getAppVersion();
-    $('navVer').textContent = 'v' + cur;
+    await window.api.downloadUpdate(asset.browser_download_url, asset.size);
+    lcProgress(asset.size, asset.size, lcLast.spd);
+    $('lcStat').textContent = 'Membuka installer…';
+    await sleep(700);
+    await window.api.installUpdate();
+  } catch (e) {
+    lcState('error', 'Update gagal', `SCRCTL untuk Windows | ${rel.tag_name}`);
+    $('lcFoundH').textContent = 'Download gagal';
+    $('lcFoundP').textContent = 'Cek koneksi internet, lalu coba lagi.';
+    $('lcGo').textContent = 'Coba lagi';
+    $('lcGo').onclick = () => lcStartDownload(rel, asset);
+  }
+}
+
+// Layar pembuka: cek GitHub Releases. Ada versi baru -> tombol download. Kalau tidak -> masuk app.
+async function launchFlow() {
+  $('lcClose').onclick = lcClose;
+  $('lcSkip').onclick = lcClose;
+  let cur = '';
+  try { cur = await window.api.getAppVersion(); $('navVer').textContent = 'v' + cur; } catch (e) {}
+  lcState('check', 'Membuka SCRCTL', `SCRCTL untuk Windows | v${cur}`);
+  const t0 = Date.now();
+  let rel = null;
+  try {
     const ctl = new AbortController();
-    const t = setTimeout(() => ctl.abort(), 8000);
+    const t = setTimeout(() => ctl.abort(), 6000);
     const r = await fetch(`https://api.github.com/repos/${UPDATE_REPO}/releases/latest`, {
       headers: { Accept: 'application/vnd.github+json' }, signal: ctl.signal
     });
     clearTimeout(t);
-    if (!r.ok) return; // repo private / offline / belum ada release -> diam saja
-    const rel = await r.json();
-    if (!rel || !rel.tag_name || !isNewerVer(rel.tag_name, cur)) return;
-    try { if (localStorage.getItem('scrctl.skipUpdate') === rel.tag_name) return; } catch (e) {}
-    $('updateTitle').textContent = `Versi baru tersedia: ${rel.tag_name}`;
-    $('updateSub').textContent = `Kamu pakai v${cur}. Download versi terbaru di GitHub Releases.`;
-    $('updateGo').onclick = () => { window.api.openUrl(rel.html_url).catch(() => toast('Gagal buka browser', true)); };
-    $('updateLater').onclick = () => {
-      try { localStorage.setItem('scrctl.skipUpdate', rel.tag_name); } catch (e) {}
-      $('updateBanner').classList.add('hidden');
-    };
-    $('updateBanner').classList.remove('hidden');
-  } catch (e) { /* offline: abaikan */ }
+    if (r.ok) rel = await r.json();
+  } catch (e) { /* offline / repo private: lanjut tanpa update */ }
+  const wait = 1000 - (Date.now() - t0);
+  if (wait > 0) await sleep(wait);
+  if (!rel || !rel.tag_name || !cur || !isNewerVer(rel.tag_name, cur)) { lcClose(); return; }
+
+  const asset = (rel.assets || []).find((a) => /-setup\.exe$/i.test(a.name));
+  lcState('found', 'Update tersedia', `v${cur}  →  ${rel.tag_name}`);
+  $('lcFoundH').textContent = `Versi ${rel.tag_name} siap diunduh`;
+  $('lcFoundP').textContent = asset
+    ? `${(asset.size / 1048576).toFixed(1)} MB. Terpasang otomatis, app akan dibuka ulang.`
+    : 'Installer otomatis tidak ada di release ini. Buka halaman download.';
+  $('lcGo').textContent = asset ? 'Download update baru' : 'Buka halaman download';
+  $('lcGo').onclick = asset
+    ? () => lcStartDownload(rel, asset)
+    : () => window.api.openUrl(rel.html_url).catch(() => toast('Gagal buka browser', true));
 }
 
 // ---------------------------------------------------------------------------
@@ -742,7 +822,7 @@ $('linkRegen').addEventListener('click', async () => {
   refreshLink();
   updateNotifBadge();
   render();
-  checkUpdate();
+  launchFlow();
   await refreshScan();
   setInterval(() => { if (!document.hidden) refreshScan(); }, 5000);
 })();
