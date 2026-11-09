@@ -601,7 +601,8 @@ pub fn link_regen(app: AppHandle) -> Value {
         };
         let dir = app.state::<AppState>().data_dir.clone();
         write_json(&dir.join("link.json"), &json!({ "token": token, "port": port }));
-        if let Some(k) = ls.kick.lock().unwrap().take() {
+        let kick = ls.kick.lock().unwrap().take();
+        if let Some(k) = kick {
             let _ = k.send(()); // HP lama harus pairing ulang dengan kode baru
         }
     }
