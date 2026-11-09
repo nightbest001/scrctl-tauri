@@ -1,0 +1,25 @@
+[package]
+name = "scrctl"
+version = "0.3.0"
+description = "SCRCTL - control panel scrcpy buatan sendiri (Tauri + Rust)"
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+tauri-plugin-notification = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["rt-multi-thread", "net", "io-util", "process", "sync", "time", "macros"] }
+arboard = { version = "3", default-features = false }
+regex = "1"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

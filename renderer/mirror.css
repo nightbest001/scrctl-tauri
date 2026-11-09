@@ -1,0 +1,59 @@
+@font-face { font-family:'Builder Sans'; font-weight:500; src:url('fonts/BuilderSans-Medium.otf'); }
+@font-face { font-family:'Builder Sans'; font-weight:700; src:url('fonts/BuilderSans-Bold.otf'); }
+@font-face { font-family:'Montserrat'; font-weight:500; src:url('fonts/montserrat-latin-500-normal.woff2') format('woff2'); }
+@font-face { font-family:'Montserrat'; font-weight:700; src:url('fonts/montserrat-latin-700-normal.woff2') format('woff2'); }
+
+:root {
+  --bg:#121214; --card:#1f2025; --card-2:#2b2c34; --text:#fff; --text-2:#bdbebe;
+  --blue:#335fff; --green:#00c97f; --red:#e8505b;
+  --font:'Builder Sans','Montserrat','Segoe UI',system-ui,sans-serif;
+}
+* { box-sizing:border-box; }
+html,body { height:100%; margin:0; }
+body { display:flex; flex-direction:column; font-family:var(--font); font-weight:500; background:var(--bg); color:var(--text); overflow:hidden; }
+.hidden { display:none !important; }
+
+svg { width:100%; height:100%; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; display:block; }
+
+.toolbar { flex-shrink:0; display:flex; align-items:center; gap:6px; padding:5px 0 5px 10px; background:var(--bg); -webkit-app-region:drag; user-select:none; }
+.tb-group { display:flex; align-items:center; gap:2px; -webkit-app-region:no-drag; }
+.tb-title { font-size:12px; font-weight:700; color:var(--text-2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:110px; margin-right:4px; }
+.tb-spacer { flex:1; min-width:0; }
+.tool-btn { width:30px; height:30px; padding:6px; border:0; border-radius:8px; background:transparent; color:var(--text-2); cursor:pointer; }
+.tool-btn:hover { background:var(--card-2); color:#fff; }
+.tool-btn:active { background:var(--blue); color:#fff; }
+.tool-btn.red:hover { background:var(--red); }
+.tool-btn.active { background:var(--blue); color:#fff; }
+
+.tb-winctl { display:flex; height:30px; margin-left:4px; -webkit-app-region:no-drag; }
+.win-btn { width:40px; border:0; background:transparent; color:var(--text-2); padding:8px 12px; cursor:pointer; }
+.win-btn:hover { background:var(--card-2); color:#fff; }
+.win-btn.close:hover { background:var(--red); }
+
+body.viewonly .needs-control { display:none; }
+
+.stage { flex:1; min-height:0; position:relative; background:#000; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+.no-signal { display:flex; flex-direction:column; align-items:center; gap:14px; color:var(--text-2); font-size:13px; font-weight:600; }
+.spinner { width:30px; height:30px; border-radius:50%; border:3px solid var(--card-2); border-top-color:var(--blue); animation:spin .8s linear infinite; }
+@keyframes spin { to { transform:rotate(360deg); } }
+.no-signal.stopped .spinner { display:none; }
+#screenCanvas { display:none; max-width:100%; max-height:100%; outline:none; background:#000; cursor:default; }
+
+.viewonly-badge { position:absolute; right:10px; top:10px; padding:4px 9px; border-radius:10px; background:rgba(0,0,0,.65); font-size:10px; font-weight:700; letter-spacing:.05em; color:var(--text-2); pointer-events:none; }
+
+.drop-overlay { display:none; position:absolute; inset:0; z-index:5; background:rgba(51,95,255,.88); font-size:20px; font-weight:700; text-align:center; align-items:center; justify-content:center; flex-direction:column; gap:10px; }
+.drop-overlay small { font-size:12px; font-weight:500; max-width:80%; opacity:.9; }
+.drop-overlay.active { display:flex; }
+
+.toast { position:absolute; bottom:16px; left:50%; transform:translateX(-50%); background:var(--card-2); color:#fff; border-radius:8px; font-size:12px; font-weight:600; padding:9px 14px; opacity:0; pointer-events:none; transition:opacity .2s; max-width:85%; z-index:6; box-shadow:0 8px 24px rgba(0,0,0,.5); }
+.toast.show { opacity:1; }
+.toast.err { background:#4a2227; box-shadow:inset 0 0 0 1px var(--red); }
+
+/* Toolbar tetap muat di lebar sempit: judul disembunyikan lalu tombol dirapatkan */
+.tool-btn { flex-shrink:1; min-width:24px; }
+@media (max-width:600px) { .tb-title { display:none; } }
+@media (max-width:520px) {
+  .toolbar { padding-left:6px; gap:2px; }
+  .tool-btn { width:26px; padding:5px; }
+  .win-btn { width:34px; padding:8px 10px; }
+}

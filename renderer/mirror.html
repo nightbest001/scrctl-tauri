@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>SCRCTL Mirror</title>
+<link href="mirror.css" rel="stylesheet">
+</head>
+<body>
+
+<div class="toolbar" id="toolbar">
+  <div class="tb-title" id="tbTitle">SCRCTL</div>
+
+  <div class="tb-group needs-control">
+    <button id="btnBack" class="tool-btn" title="Back">
+      <svg viewBox="0 0 24 24"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+    </button>
+    <button id="btnHome" class="tool-btn" title="Home">
+      <svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>
+    </button>
+    <button id="btnRecent" class="tool-btn" title="Recent apps">
+      <svg viewBox="0 0 24 24"><rect width="16" height="16" x="4" y="4" rx="2"/></svg>
+    </button>
+  </div>
+
+  <span class="tb-spacer"></span>
+
+  <div class="tb-group needs-control">
+    <button id="btnNotif" class="tool-btn" title="Panel notifikasi">
+      <svg viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+    </button>
+    <button id="btnRotate" class="tool-btn" title="Putar layar HP">
+      <svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
+    </button>
+    <button id="btnScreenOff" class="tool-btn" title="Matikan/nyalakan layar HP">
+      <svg viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="3" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+    </button>
+    <button id="btnVolDown" class="tool-btn" title="Volume -">
+      <svg viewBox="0 0 24 24"><path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+    </button>
+    <button id="btnVolUp" class="tool-btn" title="Volume +">
+      <svg viewBox="0 0 24 24"><path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"/><path d="M16 9a5 5 0 0 1 0 6"/><path d="M19.364 18.364a9 9 0 0 0 0-12.728"/></svg>
+    </button>
+    <button id="btnPower" class="tool-btn red" title="Power (kunci/buka layar)">
+      <svg viewBox="0 0 24 24"><path d="M12 2v10"/><path d="M18.4 6.6a9 9 0 1 1-12.77.04"/></svg>
+    </button>
+  </div>
+  <div class="tb-group">
+    <button id="btnFullscreen" class="tool-btn" title="Fullscreen">
+      <svg viewBox="0 0 24 24"><path d="M15 3h6v6"/><path d="m21 3-7 7"/><path d="m3 21 7-7"/><path d="M9 21H3v-6"/></svg>
+    </button>
+  </div>
+
+  <div class="tb-winctl">
+    <button id="btnMin" class="win-btn" title="Minimize"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
+    <button id="btnMax" class="win-btn" title="Maximize"><svg viewBox="0 0 24 24"><rect width="12" height="12" x="6" y="6" rx="1"/></svg></button>
+    <button id="btnClose" class="win-btn close" title="Close"><svg viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+  </div>
+</div>
+
+<div class="stage" id="stage">
+  <div class="no-signal" id="noSignal">
+    <div class="spinner"></div>
+    <span id="noSignalHint">menghubungkan…</span>
+  </div>
+  <canvas id="screenCanvas" tabindex="0"></canvas>
+  <div class="viewonly-badge hidden" id="viewOnlyBadge">VIEW ONLY</div>
+  <div class="drop-overlay" id="dropOverlay">Lepas APK / file di sini<small>.apk otomatis di-install, file lain dikirim ke /sdcard/Download</small></div>
+  <div class="toast" id="toast"></div>
+</div>
+
+<script src="tauri-shim.js"></script>
+<script src="mirror.js"></script>
+</body>
+</html>

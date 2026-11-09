@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>SCRCTL</title>
+<link href="style.css" rel="stylesheet">
+</head>
+<body>
+
+<!-- Title bar (frameless) -->
+<div class="titlebar">
+  <div class="tb-brand"><img class="tb-logo" src="icon.png" alt="">SCRCTL</div>
+  <div class="tb-drag"></div>
+  <div class="tb-ctl">
+    <button id="winMin" title="Minimize"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
+    <button id="winMax" title="Maximize"><svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1"/></svg></button>
+    <button id="winClose" class="close" title="Close"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+  </div>
+</div>
+
+<div class="shell">
+
+  <!-- Sidebar kiri -->
+  <nav class="sidebar">
+    <button class="nav-item active" data-page="home">
+      <svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>
+      <span>Beranda</span>
+    </button>
+    <button class="nav-item" data-page="notif">
+      <svg viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+      <span>Notifikasi</span>
+      <i class="badge-count hidden" id="notifBadge">0</i>
+    </button>
+    <button class="nav-item" data-page="setup">
+      <svg viewBox="0 0 24 24"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1"/></svg>
+      <span>Setup</span>
+    </button>
+    <button class="nav-item" data-page="settings">
+      <svg viewBox="0 0 24 24"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="9" cy="6" r="2.2" class="fill"/><circle cx="15" cy="12" r="2.2" class="fill"/><circle cx="8" cy="18" r="2.2" class="fill"/></svg>
+      <span>Setelan</span>
+    </button>
+    <button class="nav-item" data-page="log">
+      <svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/></svg>
+      <span>Log</span>
+      <i class="badge-dot hidden" id="logDot"></i>
+    </button>
+    <div class="nav-spacer"></div>
+    <div class="nav-foot" id="navVer" title="scrcpy server v4.1">v0.3</div>
+  </nav>
+
+  <main class="content">
+
+    <!-- Top bar -->
+    <header class="topbar">
+      <h1 id="pageTitle">Beranda</h1>
+      <label class="search" id="searchWrap">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input type="text" id="search" placeholder="Cari device">
+      </label>
+      <div class="top-right">
+        <div class="pill" id="mirrorPill">
+          <span class="pill-dot"></span><span id="mirrorPillText">Tidak ada mirror</span>
+          <button class="pill-stop hidden" id="pillStop">Stop</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Banner update (muncul kalau ada versi baru di GitHub Releases) -->
+    <div class="banner update hidden" id="updateBanner">
+      <div>
+        <div class="banner-title" id="updateTitle">Versi baru tersedia</div>
+        <div class="banner-sub" id="updateSub"></div>
+      </div>
+      <div class="banner-actions">
+        <button class="btn ghost" id="updateLater">Nanti</button>
+        <button class="btn primary" id="updateGo">Download</button>
+      </div>
+    </div>
+
+    <!-- ===================== BERANDA ===================== -->
+    <section class="page" id="page-home">
+
+      <div class="banner" id="wdBanner">
+        <div>
+          <div class="banner-title">Wireless debugging belum terdeteksi</div>
+          <div class="banner-sub" id="wdBannerSub">Nyalakan Developer options → Wireless debugging di HP dan pastikan satu WiFi dengan komputer ini.</div>
+        </div>
+        <button class="btn primary" id="wdBannerBtn">Buka Setup</button>
+      </div>
+
+      <h2 class="section-title" id="detectedTitle">Terdeteksi di jaringan</h2>
+      <div class="avatar-row" id="detectedRow"></div>
+
+      <h2 class="section-title">Device kamu</h2>
+      <div class="grid" id="deviceGrid"></div>
+    </section>
+
+    <!-- ===================== NOTIFIKASI ===================== -->
+    <section class="page hidden" id="page-notif">
+      <div class="settings-head">
+        <p class="muted" id="notifHint">Notifikasi baru dari HP yang terhubung muncul di sini.</p>
+        <button class="btn ghost" id="clearNotif">Bersihkan</button>
+      </div>
+      <div class="notif-list" id="notifList"></div>
+    </section>
+
+    <!-- ===================== SETUP ===================== -->
+    <section class="page hidden" id="page-setup">
+      <div class="two-col">
+
+        <div class="card">
+          <div class="card-head"><span class="step">1</span><div><h3>Pairing</h3><p>Hanya perlu sekali per HP.</p></div></div>
+          <ol class="hint">
+            <li>Di HP: Developer options → Wireless debugging → <b>Pair device with pairing code</b></li>
+            <li>Isi IP:PORT dan kode 6 digit yang muncul di HP</li>
+          </ol>
+          <label class="lbl">IP : Port pairing</label>
+          <input type="text" id="pairIp" placeholder="192.168.1.23:37251" spellcheck="false">
+          <label class="lbl">Kode pairing</label>
+          <input type="text" id="pairCode" placeholder="123456" maxlength="6" inputmode="numeric">
+          <button class="btn primary wide" id="pairBtn">Pair</button>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><span class="step">2</span><div><h3>Tambah device</h3><p>Port ini beda dari port pairing.</p></div></div>
+          <ol class="hint">
+            <li>Lihat <b>IP address &amp; Port</b> di layar utama Wireless debugging</li>
+            <li>Atau pilih dari daftar yang terdeteksi otomatis di bawah</li>
+          </ol>
+          <label class="lbl">IP : Port</label>
+          <input type="text" id="ip" placeholder="192.168.1.23:5555" spellcheck="false">
+          <button class="btn primary wide" id="addBtn">Tambah &amp; hubungkan</button>
+
+          <div class="lbl" style="margin-top:18px">Terdeteksi otomatis</div>
+          <div class="chips" id="setupDetected"><span class="muted">mencari…</span></div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ===================== SETELAN ===================== -->
+    <section class="page hidden" id="page-settings">
+      <div class="settings-head">
+        <p class="muted">Berlaku di mirror berikutnya. Nama opsi mengikuti flag scrcpy.</p>
+        <button class="btn ghost" id="resetSettings">Reset default</button>
+      </div>
+      <div id="settingsRoot"></div>
+    </section>
+
+    <!-- ===================== LOG ===================== -->
+    <section class="page hidden" id="page-log">
+      <div class="settings-head">
+        <p class="muted">Output adb, scrcpy-server, dan decoder.</p>
+        <button class="btn ghost" id="clearLog">Bersihkan</button>
+      </div>
+      <div class="log" id="log"></div>
+    </section>
+
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="tauri-shim.js"></script>
+<script src="renderer.js"></script>
+</body>
+</html>
