@@ -1,0 +1,9 @@
+node_modules/
+dist/
+*.log
+src-tauri/target/
+src-tauri/gen/
+src-tauri/resources/platform-tools/*
+!src-tauri/resources/platform-tools/README.txt
+portable/
+*.zip

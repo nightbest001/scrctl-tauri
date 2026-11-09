@@ -1,0 +1,6 @@
+{
+  "identifier": "default",
+  "description": "Izin dasar untuk window main dan mirror",
+  "windows": ["*"],
+  "permissions": ["core:default"]
+}

@@ -1,0 +1,69 @@
+name: Build Windows
+
+on:
+  push:
+    branches: [main, master]
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      # adb ikut ter-bundle supaya app jalan tanpa install platform-tools terpisah
+      - name: Download Android platform-tools (adb)
+        shell: pwsh
+        run: |
+          Invoke-WebRequest https://dl.google.com/android/repository/platform-tools-latest-windows.zip -OutFile pt.zip
+          Expand-Archive pt.zip -DestinationPath pt
+          New-Item -ItemType Directory -Force src-tauri/resources/platform-tools | Out-Null
+          foreach ($f in 'adb.exe','AdbWinApi.dll','AdbWinUsbApi.dll') {
+            Copy-Item "pt/platform-tools/$f" src-tauri/resources/platform-tools/
+          }
+          Get-ChildItem src-tauri/resources/platform-tools
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build (cek compile + installer)
+        run: npm run build
+
+      - name: Portable zip (exe + adb)
+        shell: pwsh
+        run: |
+          $d = "portable/SCRCTL"
+          New-Item -ItemType Directory -Force $d | Out-Null
+          Copy-Item src-tauri/target/release/scrctl.exe $d/SCRCTL.exe
+          Copy-Item -Recurse src-tauri/resources/platform-tools $d/platform-tools
+          Copy-Item src-tauri/resources/LICENSE-scrcpy.txt $d/
+          Compress-Archive -Path portable/SCRCTL -DestinationPath SCRCTL-portable.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SCRCTL-windows
+          path: |
+            SCRCTL-portable.zip
+            src-tauri/target/release/bundle/nsis/*.exe
+
+      - name: Release (kalau push tag v*)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            SCRCTL-portable.zip
+            src-tauri/target/release/bundle/nsis/*.exe
