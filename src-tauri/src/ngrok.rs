@@ -108,10 +108,39 @@ fn friendly_error(line: &str) -> Option<String> {
     if line.contains("ERR_NGROK_8013") || line.contains("verified account") || line.contains("credit card") {
         return Some("Akun ngrok perlu diverifikasi (kartu) untuk tunnel TCP. Atau pakai Tailscale.".into());
     }
+    if line.contains("ERR_NGROK_108") || line.contains("simultaneous ngrok agent sessions") {
+        return Some("Sudah ada sesi ngrok lain jalan (akun gratis cuma 1). Tutup ngrok lain atau stop di dashboard.ngrok.com/agents.".into());
+    }
     if line.contains("ERR_NGROK") || line.contains("lvl=eror") {
         return Some(line.trim().chars().take(160).collect());
     }
     None
+}
+
+/// Baca satu aliran keluaran ngrok. Galat disimpan dan dikirim ke konsol.
+fn watch<R>(app: AppHandle, r: R, is_stderr: bool) -> tauri::async_runtime::JoinHandle<()>
+where
+    R: tokio::io::AsyncRead + Unpin + Send + 'static,
+{
+    tauri::async_runtime::spawn(async move {
+        let mut lines = BufReader::new(r).lines();
+        while let Ok(Some(line)) = lines.next_line().await {
+            let l = line.trim();
+            if l.is_empty() {
+                continue;
+            }
+            let short: String = l.chars().take(200).collect();
+            if let Some(msg) = friendly_error(l) {
+                set_err(&app, msg);
+                log(&app, format!("ngrok: {}", short), true);
+            } else if is_stderr || l.contains("lvl=warn") {
+                if is_stderr && app.state::<NgrokState>().err.lock().unwrap().is_empty() {
+                    set_err(&app, short.clone());
+                }
+                log(&app, format!("ngrok: {}", short), is_stderr);
+            }
+        }
+    })
 }
 
 /// GET sederhana ke API lokal agen ngrok, tanpa pustaka HTTP tambahan.
@@ -243,7 +272,7 @@ pub async fn ngrok_start(app: AppHandle, token: Option<String>) -> Value {
     cmd.args(["tcp", &port.to_string(), "--log", "stdout", "--log-format", "logfmt"])
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
-        .stderr(Stdio::null())
+        .stderr(Stdio::piped())
         .kill_on_drop(true);
     if !tok.is_empty() {
         cmd.env("NGROK_AUTHTOKEN", &tok); // lewat env supaya tidak terlihat di daftar proses
@@ -259,25 +288,37 @@ pub async fn ngrok_start(app: AppHandle, token: Option<String>) -> Value {
         }
     };
 
+    let mut readers = Vec::new();
     if let Some(out) = child.stdout.take() {
-        let a = app.clone();
-        tauri::async_runtime::spawn(async move {
-            let mut lines = BufReader::new(out).lines();
-            while let Ok(Some(line)) = lines.next_line().await {
-                if let Some(msg) = friendly_error(&line) {
-                    set_err(&a, msg);
-                }
-            }
-        });
+        readers.push(watch(app.clone(), out, false));
+    }
+    if let Some(er) = child.stderr.take() {
+        readers.push(watch(app.clone(), er, true));
     }
 
     let (stop_tx, stop_rx) = oneshot::channel::<()>();
     *app.state::<NgrokState>().stop.lock().unwrap() = Some(stop_tx);
     let a2 = app.clone();
     tauri::async_runtime::spawn(async move {
+        let mut by_user = false;
+        let mut code: Option<i32> = None;
         tokio::select! {
-            _ = child.wait() => {}
-            _ = stop_rx => { let _ = child.kill().await; }
+            r = child.wait() => { code = r.ok().and_then(|s| s.code()); }
+            _ = stop_rx => { by_user = true; let _ = child.kill().await; }
+        }
+        // tunggu pembaca keluaran selesai supaya pesan galat sempat tersimpan
+        for h in readers {
+            let _ = tokio::time::timeout(Duration::from_secs(1), h).await;
+        }
+        if !by_user && a2.state::<NgrokState>().err.lock().unwrap().is_empty() {
+            set_err(
+                &a2,
+                format!(
+                    "ngrok berhenti sendiri (kode {}). Coba jalankan `ngrok tcp {}` di terminal untuk lihat galatnya.",
+                    code.map(|c| c.to_string()).unwrap_or_else(|| "?".into()),
+                    port
+                ),
+            );
         }
         let st = a2.state::<NgrokState>();
         *st.stop.lock().unwrap() = None;

@@ -5,6 +5,12 @@ Kalau bagian itu tidak ada, dipakai bagian `## Belum dirilis`. Ganti judul bagia
 
 ## Belum dirilis
 
+## v0.8.5
+
+### Diperbaiki
+- Toggle akses jarak jauh (ngrok) mati sendiri tanpa alasan. Keluaran galat ngrok (stderr) sekarang dibaca, tampil di konsol dan di kotak galat, lengkap dengan kode keluar.
+- Pesan jelas untuk galat sesi ngrok ganda (ERR_NGROK_108).
+
 ### Ditambahkan
 - Kontrol PC dari HP: touchpad (gerak, klik, seret, gulir), keyboard (teks, Ctrl/Alt/Win/Esc, pintasan), volume dan tombol media, serta layar PC di app HP.
 - Kontrol HP ke HP: satu HP jadi target (alamat dan kode), HP lain mengontrol lewat hotspot atau WiFi yang sama.
