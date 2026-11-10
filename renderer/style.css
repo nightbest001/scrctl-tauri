@@ -164,7 +164,7 @@ svg .fill { fill:currentColor; stroke:none; }
 .hint { margin:0 0 14px; padding-left:18px; color:var(--text-2); font-size:12px; line-height:1.6; }
 .hint b { color:#fff; font-weight:700; }
 .lbl { display:block; font-size:12px; font-weight:700; color:var(--text-2); margin:12px 0 6px; }
-input[type=text], input[type=number], select {
+input[type=text], input[type=password], input[type=number], select {
   width:100%; height:36px; padding:0 12px; background:var(--card); color:#fff; border:1px solid transparent;
   border-radius:var(--radius); font-size:14px; font-weight:500; outline:0; user-select:text;
 }
@@ -574,7 +574,7 @@ b, strong { font-weight:600; }
 .tag { font-weight:600; }
 
 /* Form */
-input[type=text], input[type=number], select { background:var(--card); border:1px solid var(--line); height:34px; }
+input[type=text], input[type=password], input[type=number], select { background:var(--card); border:1px solid var(--line); height:34px; }
 input:focus, select:focus { border-color:var(--blue); }
 .row-in input, .row-in select, .inline-search { background:var(--card); border:1px solid var(--line); }
 .link-code { font-size:20px; font-weight:600; letter-spacing:.08em; font-variant-numeric:tabular-nums; background:var(--card); border:1px solid var(--line); }
@@ -617,3 +617,7 @@ input:focus, select:focus { border-color:var(--blue); }
 
 .search input[type=text] { background:transparent; border:0; height:auto; padding:0; }
 .search { border:1px solid var(--line); background:var(--bg-2); }
+
+#ngToken { width:100%; margin:6px 0 12px; }
+#ngInstall, #ngErr { margin:12px 0; }
+#ngAddrWrap { margin-bottom:12px; }

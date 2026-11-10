@@ -809,7 +809,7 @@ function applyLink(next) {
   linkInfo = Object.assign({}, linkInfo, next);
   const i = linkInfo;
   if (i.ip) $('linkAddr').textContent = `${i.ip}:${i.port}`;
-  if (i.token) $('linkToken').textContent = i.token.slice(0, 4) + '-' + i.token.slice(4);
+  if (i.token) $('linkToken').textContent = (i.token.match(/.{1,4}/g) || [i.token]).join('-');
   const st = $('linkStatus');
   st.textContent = i.connected ? `Terhubung: ${i.name}` : 'menunggu HP…';
   st.classList.toggle('link-ok', !!i.connected);
@@ -859,7 +859,7 @@ $('pcCtlToggle').addEventListener('change', async (e) => {
     const ok = await window.api.confirmDialog({
       title: 'Kontrol PC dari HP',
       message: 'HP yang terhubung akan bisa menggerakkan mouse, mengetik, dan melihat layar PC ini.',
-      detail: 'Data Link belum dienkripsi. Nyalakan hanya di WiFi yang kamu percaya.',
+      detail: 'Siapa pun yang tahu kode Link bisa melakukannya. Matikan saat tidak dipakai.',
       ok: 'Nyalakan'
     });
     if (!ok) { e.target.checked = false; return; }
@@ -867,6 +867,75 @@ $('pcCtlToggle').addEventListener('change', async (e) => {
   try { applyLink(await window.api.linkSetControl(on)); }
   catch (err) { e.target.checked = !on; toast('Gagal mengubah pengaturan', true); }
 });
+let ng = { running: false };
+function applyNgrok(next) {
+  ng = Object.assign({}, ng, next);
+  const busy = ng.running && !ng.url && !ng.err;
+  $('ngToggle').checked = !!ng.running;
+  $('ngStatus').textContent = ng.url ? 'Aktif. HP bisa terhubung dari mana saja.'
+    : busy ? 'Menyambung ke ngrok…' : ng.running ? 'Menunggu alamat…' : 'Dimatikan';
+  $('ngStatus').classList.toggle('link-ok', !!ng.url);
+  $('ngAddrWrap').classList.toggle('hidden', !ng.url);
+  if (ng.url) $('ngAddr').textContent = ng.url;
+  $('ngInstall').classList.toggle('hidden', ng.installed !== false);
+  $('ngInstallBtn').disabled = !!ng.installing;
+  $('ngInstallBtn').textContent = ng.installing ? 'Memasang…' : 'Pasang ngrok';
+  if (ng.installing) $('ngStatus').textContent = 'Memasang ngrok…';
+  $('ngErr').classList.toggle('hidden', !ng.err);
+  $('ngErr').textContent = ng.err || '';
+  $('ngForget').disabled = !ng.has_token;
+  $('ngToken').placeholder = ng.has_token ? 'Token tersimpan. Isi untuk menggantinya' : 'Kosongkan jika sudah diatur di ngrok';
+}
+window.api.onNgrokState((s) => applyNgrok(s));
+window.api.ngrokStatus().then(applyNgrok).catch(() => {});
+async function ngInstall() {
+  const ok = await window.api.confirmDialog({
+    title: 'Pasang ngrok',
+    message: 'Orbit akan mengunduh dan memasang ngrok di komputer ini.',
+    detail: 'Memakai winget (Ngrok.Ngrok). Jika winget tidak ada, paket resmi diunduh dari bin.equinox.io ke folder data Orbit.',
+    ok: 'Pasang'
+  });
+  if (!ok) return false;
+  applyNgrok({ installing: true, err: '' });
+  try {
+    const r = await window.api.ngrokInstall();
+    applyNgrok(r);
+    if (r.installed) toast('ngrok terpasang');
+    return !!r.installed;
+  } catch (err) { applyNgrok({ installing: false }); toast('Gagal memasang ngrok', true); return false; }
+}
+$('ngInstallBtn').addEventListener('click', ngInstall);
+$('ngToggle').addEventListener('change', async (e) => {
+  const on = e.target.checked;
+  try {
+    if (on && ng.installed === false) {
+      e.target.checked = false;
+      await ngInstall();
+      return;
+    }
+    if (on) {
+      const ok = await window.api.confirmDialog({
+        title: 'Akses jarak jauh',
+        message: 'PC ini akan bisa dijangkau dari internet lewat tunnel ngrok.',
+        detail: 'Data Link dienkripsi, tapi siapa pun yang tahu kode bisa mencoba terhubung. Pakai kode yang kuat dan matikan saat tidak dipakai.',
+        ok: 'Nyalakan'
+      });
+      if (!ok) { e.target.checked = false; return; }
+      applyNgrok({ running: true, url: null, err: '' });
+      const tok = $('ngToken').value.trim();
+      const r = await window.api.ngrokStart(tok);
+      if (tok) $('ngToken').value = '';
+      applyNgrok(r);
+    } else {
+      applyNgrok(await window.api.ngrokStop());
+    }
+  } catch (err) { e.target.checked = !on; toast('Gagal mengubah ngrok', true); }
+});
+$('ngCopy').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText($('ngAddr').textContent); toast('Alamat disalin'); } catch (e) { toast('Gagal menyalin', true); }
+});
+$('ngDash').addEventListener('click', () => window.api.openUrl('https://dashboard.ngrok.com/get-started/your-authtoken'));
+$('ngForget').addEventListener('click', async () => { applyNgrok(await window.api.ngrokForgetToken()); toast('Token dihapus'); });
 $('linkSendFile').addEventListener('click', async () => {
   const r = await window.api.linkSendFile();
   if (r && r.err) toast(r.err, true);

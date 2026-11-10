@@ -32,6 +32,7 @@ use tokio::process::Command;
 use tokio::sync::{mpsc, oneshot, Mutex as AsyncMutex};
 
 mod link;
+mod ngrok;
 
 macro_rules! args {
     ($($x:expr),* $(,)?) => {
@@ -490,7 +491,10 @@ async fn dialog_confirm(
 #[tauri::command]
 async fn open_url(url: String) -> Result<(), String> {
     let bad = url.chars().any(|c| c.is_whitespace() || "&^\"<>|%".contains(c));
-    if !url.starts_with("https://github.com/nightbest001/scrctl-tauri") || bad {
+    let allowed = url.starts_with("https://github.com/nightbest001/scrctl-tauri")
+        || url.starts_with("https://ngrok.com/")
+        || url.starts_with("https://dashboard.ngrok.com/");
+    if !allowed || bad {
         return Err("url ditolak".into());
     }
     #[cfg(windows)]
@@ -1889,6 +1893,7 @@ fn main() {
             let _ = std::fs::create_dir_all(&data_dir);
             let adb = find_adb(app.handle());
             app.manage(link::init(&data_dir));
+            app.manage(ngrok::init());
             app.manage(AppState {
                 data_dir,
                 adb,
@@ -1969,6 +1974,11 @@ fn main() {
             link::link_send,
             link::link_open_received,
             link::link_set_control,
+            ngrok::ngrok_status,
+            ngrok::ngrok_start,
+            ngrok::ngrok_stop,
+            ngrok::ngrok_install,
+            ngrok::ngrok_forget_token,
             phone::phone_toggle,
             phone::phone_open_app,
             phone::deck_get,
@@ -1977,6 +1987,11 @@ fn main() {
             pcmedia::pc_media_state,
             pcmedia::pc_media_cmd,
         ])
-        .run(tauri::generate_context!())
-        .expect("gagal menjalankan Orbit");
+        .build(tauri::generate_context!())
+        .expect("gagal menjalankan Orbit")
+        .run(|app, event| {
+            if let tauri::RunEvent::Exit = event {
+                ngrok::shutdown(app); // jangan tinggalkan ngrok.exe yatim
+            }
+        });
 }

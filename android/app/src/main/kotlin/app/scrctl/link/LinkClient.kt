@@ -25,13 +25,15 @@ import java.net.Socket
 import java.nio.ByteBuffer
 import java.util.concurrent.atomic.AtomicInteger
 
-/** Koneksi ke Orbit di PC: handshake HMAC, auto-reconnect, kirim/terima pesan dan file. */
+/** Koneksi ke Orbit di PC: handshake saling membuktikan kode, data terenkripsi AES-GCM, auto-reconnect. */
 class LinkClient(context: Context, private val scope: CoroutineScope) {
 
     private val ctx = context.applicationContext
 
     @Volatile private var sock: Socket? = null
     @Volatile private var out: DataOutputStream? = null
+    @Volatile private var wc: Crypt? = null // kunci arah HP -> PC; null selama handshake
+    private var rc: Crypt? = null // kunci arah PC -> HP
     private val writeLock = Mutex()
     private var job: Job? = null
     private val fileIds = AtomicInteger(1)
@@ -78,32 +80,50 @@ class LinkClient(context: Context, private val scope: CoroutineScope) {
         try { sock?.close() } catch (_: Exception) {}
         sock = null
         out = null
+        wc = null
+        rc = null
     }
 
     private suspend fun session(host: String, port: Int, token: String, onReady: () -> Unit): Unit = coroutineScope {
         val s = Socket()
         sock = s
-        s.connect(InetSocketAddress(host, port), 5000)
+        s.connect(InetSocketAddress(host, port), 10_000)
         s.tcpNoDelay = true
         s.soTimeout = 10_000
         val din = DataInputStream(BufferedInputStream(s.getInputStream()))
         out = DataOutputStream(BufferedOutputStream(s.getOutputStream()))
 
-        val ch = readJson(din)
+        val ch = readJson(din, null)
         if (ch.optString("t") != "challenge") throw IOException("bukan server Orbit")
+        if (ch.optInt("ver", 1) < Proto.VERSION) throw IOException("Orbit di PC versi lama. Perbarui Orbit di PC")
         val pc = ch.optString("pc", "PC")
+        val sNonce = Proto.unhex(ch.getString("nonce"))
+        val cNonce = ByteArray(16).also { java.security.SecureRandom().nextBytes(it) }
+        val keys = Proto.deriveKeys(token, sNonce, cNonce)
         sendJson(
             JSONObject().put("t", "hello")
-                .put("proof", Proto.proof(token, ch.getString("nonce")))
-                .put("name", Build.MODEL)
-                .put("ver", 1)
+                .put("ver", Proto.VERSION)
+                .put("cnonce", Proto.hex(cNonce))
+                .put("proof", Proto.hex(Proto.proof(keys, "C", sNonce, cNonce)))
+                .put("name", Build.MODEL),
+            plain = true,
         )
-        val resp = readJson(din)
+        val resp = readJson(din, null)
         when (resp.optString("t")) {
-            "welcome" -> {}
-            "deny" -> throw AuthException()
+            "welcome" -> {
+                // PC juga harus membuktikan tahu kode, supaya server palsu tidak bisa menyamar
+                val expect = Proto.proof(keys, "S", sNonce, cNonce)
+                val got = try { Proto.unhex(resp.optString("proof")) } catch (_: IOException) { ByteArray(0) }
+                if (!Proto.sameBytes(expect, got)) throw IOException("PC tidak bisa membuktikan kode. Sambungan dibatalkan")
+            }
+            "deny" -> {
+                if (resp.optString("reason") == "version") throw IOException("Versi Orbit di PC dan HP berbeda. Perbarui keduanya")
+                throw AuthException()
+            }
             else -> throw IOException("handshake gagal")
         }
+        rc = Crypt(keys.s2c)
+        wc = Crypt(keys.c2s)
 
         s.soTimeout = 30_000
         onReady()
@@ -120,7 +140,7 @@ class LinkClient(context: Context, private val scope: CoroutineScope) {
         }
         try {
             while (true) {
-                val f = readFrame(din)
+                val f = readFrame(din, rc)
                 when (f.kind) {
                     0 -> handleJson(JSONObject(String(f.body, Charsets.UTF_8)))
                     3 -> LinkHub.pc.onFrame(f.body)
@@ -185,15 +205,22 @@ class LinkClient(context: Context, private val scope: CoroutineScope) {
         }
     }
 
-    private suspend fun sendJson(o: JSONObject) = sendRaw(0, o.toString().toByteArray(Charsets.UTF_8))
+    private suspend fun sendJson(o: JSONObject, plain: Boolean = false) =
+        sendRaw(0, o.toString().toByteArray(Charsets.UTF_8), plain)
 
-    private suspend fun sendRaw(kind: Int, body: ByteArray) {
+    /** [plain] hanya untuk pesan handshake. Selain itu pesan baru boleh keluar setelah kunci sesi siap. */
+    private suspend fun sendRaw(kind: Int, body: ByteArray, plain: Boolean = false) {
         val o = out ?: throw IOException("tidak terhubung")
         writeLock.withLock {
             try {
-                o.writeInt(body.size + 1)
-                o.writeByte(kind)
-                o.write(body)
+                val payload = ByteArray(1 + body.size)
+                payload[0] = kind.toByte()
+                System.arraycopy(body, 0, payload, 1, body.size)
+                val c = wc
+                if (c == null && !plain) throw IOException("sambungan belum siap")
+                val sealed = if (c != null) c.seal(payload) else payload
+                o.writeInt(sealed.size)
+                o.write(sealed)
                 o.flush()
             } catch (e: IOException) {
                 closeSock()
@@ -257,17 +284,19 @@ class LinkClient(context: Context, private val scope: CoroutineScope) {
     }
 
     // ---- baca ----
-    private fun readFrame(d: DataInputStream): Frame {
+    private fun readFrame(d: DataInputStream, crypt: Crypt?): Frame {
         val len = d.readInt()
-        if (len < 1 || len > Proto.MAX_FRAME) throw IOException("frame tidak valid")
-        val kind = d.readUnsignedByte()
-        val body = ByteArray(len - 1)
-        d.readFully(body)
-        return Frame(kind, body)
+        val max = if (crypt != null) Proto.MAX_SEALED else Proto.MAX_FRAME
+        if (len < 1 || len > max) throw IOException("frame tidak valid")
+        val buf = ByteArray(len)
+        d.readFully(buf)
+        val plain = if (crypt != null) crypt.open(buf) else buf
+        if (plain.isEmpty()) throw IOException("frame kosong")
+        return Frame(plain[0].toInt() and 0xFF, plain.copyOfRange(1, plain.size))
     }
 
-    private fun readJson(d: DataInputStream): JSONObject {
-        val f = readFrame(d)
+    private fun readJson(d: DataInputStream, crypt: Crypt?): JSONObject {
+        val f = readFrame(d, crypt)
         if (f.kind != 0) throw IOException("bukan JSON")
         return JSONObject(String(f.body, Charsets.UTF_8))
     }

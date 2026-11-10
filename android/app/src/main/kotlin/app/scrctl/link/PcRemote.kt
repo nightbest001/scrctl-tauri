@@ -15,6 +15,10 @@ data class PcState(
     val screenOn: Boolean = false,
     val width: Int = 0,
     val height: Int = 0,
+    /** "phone" kalau yang dikontrol HP lain, bukan PC. */
+    val kind: String = "pc",
+    /** Khusus HP target: layanan Aksesibilitas aktif sehingga sentuhan bisa dijalankan. */
+    val input: Boolean = true,
 )
 
 /** Frame layar PC terbaru. [seq] naik tiap frame supaya UI tahu harus menggambar ulang. */
@@ -65,6 +69,9 @@ class PcRemote {
         frame.value = null
     }
 
+    /** Tombol sistem HP target: back, home, recents, notif, quick, lock. */
+    fun nav(k: String) = send("nav") { put("k", k) }
+
     fun requestState() = send("state")
 
     // ---- dari PC ----
@@ -75,6 +82,8 @@ class PcRemote {
                 screenOn = o.optBoolean("screen", false),
                 width = o.optInt("w"),
                 height = o.optInt("h"),
+                kind = o.optString("kind", "pc"),
+                input = o.optBoolean("input", true),
             )
         }
         if (!state.value.screenOn) frame.value = null

@@ -253,7 +253,7 @@
             <button class="btn ghost" id="linkCopy">Salin alamat</button>
             <button class="btn ghost" id="linkRegen">Kode baru</button>
           </div>
-          <p class="muted link-note">Windows bisa menanyakan izin firewall saat pertama jalan: izinkan di jaringan privat. Data belum dienkripsi, pakai di WiFi yang kamu percaya.</p>
+          <p class="muted link-note">Windows bisa menanyakan izin firewall saat pertama jalan: izinkan di jaringan privat. Data Link dienkripsi dan hanya bisa dibuka dengan kode di atas.</p>
         </div>
 
         <div class="card">
@@ -283,7 +283,32 @@
           <li>Volume dan tombol media</li>
           <li>Lihat layar PC di app Orbit Link dan sentuh untuk klik</li>
         </ul>
-        <p class="warn-note">Data Link belum dienkripsi. Nyalakan hanya di WiFi yang kamu percaya, dan matikan saat tidak dipakai. Saat layar PC dikirim, tanda muncul di bagian atas jendela ini.</p>
+        <p class="warn-note">Siapa pun yang tahu kode Link bisa mengontrol PC ini. Matikan saat tidak dipakai. Saat layar PC dikirim, tanda muncul di bagian atas jendela ini.</p>
+      </div>
+
+      <div class="card" style="margin-top:16px">
+        <div class="card-head">
+          <div><h3>Akses jarak jauh (ngrok)</h3><p id="ngStatus">Dimatikan</p></div>
+          <label class="switch"><input type="checkbox" id="ngToggle"><span class="track"></span></label>
+        </div>
+        <p class="muted link-note">Pakai ngrok di PC ini untuk menghubungkan HP dari luar WiFi. Tunnel berjalan dari PC kamu sendiri, dan isi data tetap dienkripsi end-to-end dengan kode Link.</p>
+        <div id="ngAddrWrap" class="hidden">
+          <label class="lbl">Alamat jarak jauh (isi di app Orbit Link)</label>
+          <div class="link-code" id="ngAddr">-</div>
+          <div class="link-row"><button class="btn ghost" id="ngCopy">Salin alamat</button></div>
+        </div>
+        <label class="lbl" for="ngToken">Authtoken ngrok</label>
+        <input type="password" id="ngToken" autocomplete="off" spellcheck="false" placeholder="Kosongkan jika sudah diatur di ngrok">
+        <div class="link-row">
+          <button class="btn ghost" id="ngDash">Buka dashboard ngrok</button>
+          <button class="btn ghost" id="ngForget">Hapus token tersimpan</button>
+        </div>
+        <div class="warn-note" id="ngInstall">
+          <div>ngrok belum terpasang di komputer ini. Orbit bisa memasangnya otomatis (lewat winget, atau unduhan resmi dari ngrok.com).</div>
+          <div class="link-row" style="margin-top:10px"><button class="btn primary" id="ngInstallBtn">Pasang ngrok</button></div>
+        </div>
+        <p class="warn-note hidden" id="ngErr"></p>
+        <p class="muted link-note">Tunnel TCP ngrok bisa meminta akun terverifikasi. Authtoken disimpan di folder data Orbit. Pakai kualitas layar Hemat untuk koneksi jarak jauh.</p>
       </div>
     </section>
 

@@ -206,7 +206,7 @@ class MainActivity : ComponentActivity() {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     val idle = ui.conn == Conn.Stopped || ui.conn == Conn.AuthFailed
                     if (idle) {
-                        Text("Buka Orbit di PC, menu Link HP, lalu isi alamat dan kode yang tampil di sana.", style = OrbitText.Caption)
+                        Text("Buka Orbit di PC, menu Link HP, lalu isi alamat dan kode yang tampil di sana. Dari luar WiFi, pakai alamat ngrok (contoh 0.tcp.ap.ngrok.io:12345). Untuk HP lain, isi alamat dan kode dari layar "HP ini bisa dikontrol".", style = OrbitText.Caption)
                         OutlinedTextField(
                             value = host, onValueChange = { host = it },
                             label = { Text("Alamat PC") },
@@ -218,7 +218,7 @@ class MainActivity : ComponentActivity() {
                         )
                         OutlinedTextField(
                             value = code, onValueChange = { code = it },
-                            label = { Text("Kode (8 karakter)") },
+                            label = { Text("Kode dari Orbit di PC") },
                             singleLine = true, modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(10.dp),
                             colors = fieldColors(),
@@ -227,7 +227,7 @@ class MainActivity : ComponentActivity() {
                         PrimaryButton("Hubungkan", {
                             val hp = parseHost(host)
                             val tk = Proto.normalizeToken(code)
-                            if (hp == null || tk.length != 8) toast("Isi alamat PC dan kode 8 karakter")
+                            if (hp == null || tk.length < 8 || tk.length > 16) toast("Isi alamat PC dan kode dari Orbit")
                             else connect(hp.first, hp.second, tk)
                         }, Modifier.fillMaxWidth())
                     } else {
@@ -244,6 +244,16 @@ class MainActivity : ComponentActivity() {
                     enabled = connected,
                     onClick = { startActivity(Intent(this@MainActivity, ControlActivity::class.java)) },
                     trailing = { TextAction("Buka", { startActivity(Intent(this@MainActivity, ControlActivity::class.java)) }, connected) },
+                )
+            }
+
+            // --- HP ini dikontrol HP lain ---
+            Section("Kontrol HP ke HP", note = "Jadikan HP ini bisa dikontrol HP lain lewat hotspot atau WiFi yang sama. Pengontrol memasukkan alamat dan kode yang tampil di sana.") {
+                ListRow(
+                    title = "HP ini bisa dikontrol",
+                    subtitle = "Tampilkan alamat dan kode",
+                    onClick = { startActivity(Intent(this@MainActivity, HostActivity::class.java)) },
+                    trailing = { TextAction("Buka", { startActivity(Intent(this@MainActivity, HostActivity::class.java)) }) },
                 )
             }
 

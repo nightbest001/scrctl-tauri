@@ -1,12 +1,20 @@
 // Orbit Link — server TCP di PC untuk app Android "Orbit Link".
 //
-// Protokol (v1): frame = u32 BE panjang | u8 jenis | isi.
-//   jenis 0 = JSON, jenis 1 = potongan file (4 byte id BE + data).
-// Handshake: PC kirim {t:"challenge", nonce}; HP balas {t:"hello", proof=HMAC-SHA256(kode, nonce)};
-// PC jawab {t:"welcome"} atau {t:"deny"}. Kode tidak pernah dikirim lewat jaringan.
-// NB: isi data (notifikasi, clipboard, file) belum dienkripsi — pakai di WiFi yang kamu percaya.
+// Protokol v2: frame = u32 BE panjang | isi. Isi = jenis (u8) + data, dan setelah handshake seluruh isi
+// dienkripsi AES-256-GCM (isi terkirim = nonce counter implisit + ciphertext + tag 16 byte).
+//   jenis 0 = JSON, 1 = potongan file (4 byte id BE + data), 2 = frame kamera HP, 3 = layar PC.
+// Handshake (teks biasa, hanya berisi nonce dan bukti):
+//   PC  -> {t:"challenge", ver:2, nonce:S, pc}
+//   HP  -> {t:"hello", ver:2, cnonce:C, name, proof}
+//   PC  -> {t:"welcome", pc, proof} atau {t:"deny"}
+// Kunci: master = PBKDF2-HMAC-SHA256(kode, "orbit-link-v2" | S | C, 100.000 putaran).
+//   k_auth, k_c2s, k_s2c = HMAC-SHA256(master, "auth" | "c2s" | "s2c").
+//   proof HP = HMAC(k_auth, "C" | S | C), proof PC = HMAC(k_auth, "S" | S | C): keduanya saling membuktikan kode.
+//   Nonce AES-GCM = 4 byte nol + counter u64 BE per arah, jadi tidak pernah dipakai dua kali.
+// Kode tidak pernah dikirim, dan semua data setelah handshake (notifikasi, clipboard, file, input, layar) terenkripsi.
 //
-// Fitur: notifikasi HP -> PC, clipboard dua arah, file dua arah, baterai + kontrol cepat.
+// Fitur: notifikasi HP -> PC, clipboard dua arah, file dua arah, baterai + kontrol cepat,
+// kontrol PC dari HP (mouse, keyboard, layar).
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -15,6 +23,8 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::Duration;
 
+use aes_gcm::aead::{Aead, KeyInit};
+use aes_gcm::{Aes256Gcm, Nonce};
 use hmac::{Hmac, Mac};
 use rand::Rng;
 use serde_json::{json, Value};
@@ -31,6 +41,9 @@ use super::{clip_read, clip_write, log, read_json, write_json, AppState};
 
 const DEFAULT_PORT: u16 = 5588;
 const MAX_FRAME: usize = 1 << 20; // 1 MiB
+const MAX_SEALED: usize = MAX_FRAME + 16; // + tag GCM
+const KDF_ROUNDS: u32 = 100_000;
+const TOKEN_LEN: usize = 12;
 const CHUNK: usize = 128 * 1024;
 
 // ---------------------------------------------------------------------------
@@ -82,12 +95,13 @@ pub struct LinkState {
     screen_on: AtomicBool,
     screen_gen: AtomicU64,
     screen_q: Arc<AtomicUsize>,
+    fails: Mutex<(u32, std::time::Instant)>, // kegagalan kode berturut-turut
 }
 
 fn gen_token() -> String {
     const CH: &[u8] = b"ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     let mut rng = rand::thread_rng();
-    (0..8).map(|_| CH[rng.gen_range(0..CH.len())] as char).collect()
+    (0..TOKEN_LEN).map(|_| CH[rng.gen_range(0..CH.len())] as char).collect()
 }
 
 fn new_nonce() -> String {
@@ -110,17 +124,94 @@ fn from_hex(s: &str) -> Option<Vec<u8>> {
         .collect()
 }
 
-fn proof_ok(token: &str, nonce: &str, proof_hex: &str) -> bool {
+fn hmac32(key: &[u8], parts: &[&[u8]]) -> [u8; 32] {
+    let mut mac = <Hmac<Sha256> as Mac>::new_from_slice(key).expect("hmac key");
+    for p in parts {
+        mac.update(p);
+    }
+    let mut out = [0u8; 32];
+    out.copy_from_slice(&mac.finalize().into_bytes());
+    out
+}
+
+struct Keys {
+    auth: [u8; 32],
+    c2s: [u8; 32],
+    s2c: [u8; 32],
+}
+
+/// Turunkan kunci sesi dari kode dan dua nonce. Mahal (PBKDF2) sengaja, supaya menebak kode lewat
+/// rekaman handshake tetap tidak praktis.
+fn derive_keys(token: &str, s_nonce: &[u8], c_nonce: &[u8]) -> Keys {
+    let mut salt = b"orbit-link-v2".to_vec();
+    salt.extend_from_slice(s_nonce);
+    salt.extend_from_slice(c_nonce);
+    let mut master = [0u8; 32];
+    pbkdf2::pbkdf2_hmac::<Sha256>(token.as_bytes(), &salt, KDF_ROUNDS, &mut master);
+    Keys {
+        auth: hmac32(&master, &[b"auth"]),
+        c2s: hmac32(&master, &[b"c2s"]),
+        s2c: hmac32(&master, &[b"s2c"]),
+    }
+}
+
+fn proof_for(keys: &Keys, who: &[u8], s_nonce: &[u8], c_nonce: &[u8]) -> [u8; 32] {
+    hmac32(&keys.auth, &[who, s_nonce, c_nonce])
+}
+
+fn proof_ok(keys: &Keys, who: &[u8], s_nonce: &[u8], c_nonce: &[u8], proof_hex: &str) -> bool {
     let p = match from_hex(proof_hex) {
         Some(p) => p,
         None => return false,
     };
-    let mut mac = match Hmac::<Sha256>::new_from_slice(token.as_bytes()) {
-        Ok(m) => m,
-        Err(_) => return false,
-    };
-    mac.update(nonce.as_bytes());
+    let mut mac = <Hmac<Sha256> as Mac>::new_from_slice(&keys.auth).expect("hmac key");
+    mac.update(who);
+    mac.update(s_nonce);
+    mac.update(c_nonce);
     mac.verify_slice(&p).is_ok()
+}
+
+/// Satu arah aliran terenkripsi. Counter naik tiap frame, jadi nonce tidak pernah berulang.
+struct Crypt {
+    c: Aes256Gcm,
+    n: u64,
+}
+
+impl Crypt {
+    fn new(key: &[u8; 32]) -> Crypt {
+        Crypt { c: Aes256Gcm::new_from_slice(key).expect("kunci 32 byte"), n: 0 }
+    }
+
+    fn nonce(&mut self) -> [u8; 12] {
+        let mut n = [0u8; 12];
+        n[4..].copy_from_slice(&self.n.to_be_bytes());
+        self.n += 1;
+        n
+    }
+
+    fn seal(&mut self, plain: &[u8]) -> Vec<u8> {
+        let n = self.nonce();
+        self.c.encrypt(Nonce::from_slice(&n), plain).expect("enkripsi")
+    }
+
+    fn open(&mut self, sealed: &[u8]) -> Option<Vec<u8>> {
+        let n = self.nonce();
+        self.c.decrypt(Nonce::from_slice(&n), sealed).ok()
+    }
+}
+
+fn locked_out(ls: &LinkState) -> bool {
+    let g = ls.fails.lock().unwrap();
+    g.0 >= 5 && g.1.elapsed() < Duration::from_secs(30)
+}
+
+fn note_fail(ls: &LinkState) {
+    let mut g = ls.fails.lock().unwrap();
+    if g.1.elapsed() > Duration::from_secs(60) {
+        g.0 = 0;
+    }
+    g.0 += 1;
+    g.1 = std::time::Instant::now();
 }
 
 pub fn init(data_dir: &Path) -> LinkState {
@@ -134,7 +225,8 @@ pub fn init(data_dir: &Path) -> LinkState {
         .filter(|p| *p >= 1024)
         .unwrap_or(DEFAULT_PORT);
     let mut dirty = false;
-    if token.len() != 8 {
+    if token.len() != 8 && token.len() != TOKEN_LEN {
+        // kode lama (8 karakter) tetap dipakai; kode baru 12 karakter
         token = gen_token();
         dirty = true;
     }
@@ -155,57 +247,72 @@ pub fn init(data_dir: &Path) -> LinkState {
         screen_on: AtomicBool::new(false),
         screen_gen: AtomicU64::new(0),
         screen_q: Arc::new(AtomicUsize::new(0)),
+        fails: Mutex::new((0, std::time::Instant::now())),
     }
 }
 
 // ---------------------------------------------------------------------------
 // Frame I/O
 // ---------------------------------------------------------------------------
-async fn read_frame(r: &mut OwnedReadHalf) -> std::io::Result<Frame> {
+fn bad(msg: &str) -> std::io::Error {
+    std::io::Error::new(std::io::ErrorKind::InvalidData, msg.to_string())
+}
+
+async fn read_frame(r: &mut OwnedReadHalf, crypt: Option<&mut Crypt>) -> std::io::Result<Frame> {
     let mut len = [0u8; 4];
     r.read_exact(&mut len).await?;
     let n = u32::from_be_bytes(len) as usize;
-    if n == 0 || n > MAX_FRAME {
-        return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "ukuran frame tidak valid"));
+    let max = if crypt.is_some() { MAX_SEALED } else { MAX_FRAME };
+    if n == 0 || n > max {
+        return Err(bad("ukuran frame tidak valid"));
     }
     let mut buf = vec![0u8; n];
     r.read_exact(&mut buf).await?;
+    if let Some(c) = crypt {
+        buf = c.open(&buf).ok_or_else(|| bad("frame gagal didekripsi"))?;
+        if buf.is_empty() {
+            return Err(bad("frame kosong"));
+        }
+    }
     let kind = buf[0];
     let body = buf.split_off(1);
-    if kind == 0 {
-        let v = serde_json::from_slice::<Value>(&body)
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e.to_string()))?;
-        Ok(Frame::Json(v))
-    } else if kind == 2 {
-        Ok(Frame::Cam(body))
-    } else if kind == 3 {
-        Ok(Frame::Screen(body))
-    } else {
-        Ok(Frame::Bin(body))
+    match kind {
+        0 => {
+            let v = serde_json::from_slice::<Value>(&body).map_err(|e| bad(&e.to_string()))?;
+            Ok(Frame::Json(v))
+        }
+        2 => Ok(Frame::Cam(body)),
+        3 => Ok(Frame::Screen(body)),
+        _ => Ok(Frame::Bin(body)),
     }
 }
 
-async fn write_frame(w: &mut OwnedWriteHalf, f: &Frame) -> std::io::Result<()> {
-    let mut out: Vec<u8>;
+async fn write_frame(w: &mut OwnedWriteHalf, f: &Frame, crypt: Option<&mut Crypt>) -> std::io::Result<()> {
+    let mut payload: Vec<u8>;
     match f {
         Frame::Json(v) => {
             let body = v.to_string().into_bytes();
-            out = Vec::with_capacity(5 + body.len());
-            out.extend_from_slice(&((body.len() + 1) as u32).to_be_bytes());
-            out.push(0);
-            out.extend_from_slice(&body);
+            payload = Vec::with_capacity(1 + body.len());
+            payload.push(0);
+            payload.extend_from_slice(&body);
         }
         Frame::Bin(b) | Frame::Cam(b) | Frame::Screen(b) => {
-            out = Vec::with_capacity(5 + b.len());
-            out.extend_from_slice(&((b.len() + 1) as u32).to_be_bytes());
-            out.push(match f {
+            payload = Vec::with_capacity(1 + b.len());
+            payload.push(match f {
                 Frame::Cam(_) => 2,
                 Frame::Screen(_) => 3,
                 _ => 1,
             });
-            out.extend_from_slice(b);
+            payload.extend_from_slice(b);
         }
     }
+    let sealed = match crypt {
+        Some(c) => c.seal(&payload),
+        None => payload,
+    };
+    let mut out = Vec::with_capacity(4 + sealed.len());
+    out.extend_from_slice(&(sealed.len() as u32).to_be_bytes());
+    out.extend_from_slice(&sealed);
     w.write_all(&out).await?;
     w.flush().await
 }
@@ -353,32 +460,59 @@ async fn handle(app: AppHandle, sock: TcpStream, addr: String) {
     let pc = pc_name();
 
     // --- handshake ---
+    if locked_out(&app.state::<LinkState>()) {
+        return; // terlalu banyak kode salah: tolak sementara
+    }
     let nonce = new_nonce();
-    let chal = Frame::Json(json!({ "t": "challenge", "nonce": nonce, "pc": pc }));
-    if write_frame(&mut w, &chal).await.is_err() {
+    let s_nonce = from_hex(&nonce).unwrap_or_default();
+    let chal = Frame::Json(json!({ "t": "challenge", "ver": 2, "nonce": nonce, "pc": pc }));
+    if write_frame(&mut w, &chal, None).await.is_err() {
         return;
     }
-    let first = match tokio::time::timeout(Duration::from_secs(10), read_frame(&mut r)).await {
+    let first = match tokio::time::timeout(Duration::from_secs(20), read_frame(&mut r, None)).await {
         Ok(Ok(Frame::Json(v))) => v,
         _ => return,
     };
+    let ver = first.get("ver").and_then(|x| x.as_u64()).unwrap_or(1);
+    let c_nonce = from_hex(&s(&first, "cnonce")).unwrap_or_default();
+    if s(&first, "t") != "hello" || ver < 2 || c_nonce.len() != 16 {
+        let _ = write_frame(&mut w, &Frame::Json(json!({ "t": "deny", "reason": "version" })), None).await;
+        log(&app, format!("Orbit Link: {} memakai versi app lama. Perbarui Orbit Link di HP", addr), true);
+        return;
+    }
     let token = app.state::<LinkState>().cfg.lock().unwrap().token.clone();
-    let proof = s(&first, "proof");
-    if s(&first, "t") != "hello" || !proof_ok(&token, &nonce, &proof) {
-        let _ = write_frame(&mut w, &Frame::Json(json!({ "t": "deny" }))).await;
+    let keys = {
+        let (t, sn, cn) = (token.clone(), s_nonce.clone(), c_nonce.clone());
+        match tokio::task::spawn_blocking(move || derive_keys(&t, &sn, &cn)).await {
+            Ok(k) => k,
+            Err(_) => return,
+        }
+    };
+    if !proof_ok(&keys, b"C", &s_nonce, &c_nonce, &s(&first, "proof")) {
+        note_fail(&app.state::<LinkState>());
+        let _ = write_frame(&mut w, &Frame::Json(json!({ "t": "deny" })), None).await;
         log(&app, format!("Orbit Link: {} ditolak (kode salah)", addr), true);
         tokio::time::sleep(Duration::from_secs(1)).await;
         return;
     }
+    app.state::<LinkState>().fails.lock().unwrap().0 = 0;
     let name: String = s(&first, "name")
         .chars()
         .filter(|c| !c.is_control())
         .take(40)
         .collect();
     let name = if name.trim().is_empty() { "HP".to_string() } else { name };
-    if write_frame(&mut w, &Frame::Json(json!({ "t": "welcome", "pc": pc }))).await.is_err() {
+    let welcome = Frame::Json(json!({
+        "t": "welcome",
+        "pc": pc,
+        "proof": to_hex(&proof_for(&keys, b"S", &s_nonce, &c_nonce))
+    }));
+    if write_frame(&mut w, &welcome, None).await.is_err() {
         return;
     }
+    // mulai sini semua frame terenkripsi, satu kunci per arah
+    let mut read_crypt = Crypt::new(&keys.c2s);
+    let mut write_crypt = Crypt::new(&keys.s2c);
 
     // --- sesi aktif ---
     let (tx, mut rx) = mpsc::channel::<Frame>(32);
@@ -401,7 +535,7 @@ async fn handle(app: AppHandle, sock: TcpStream, addr: String) {
     let writer = tauri::async_runtime::spawn(async move {
         while let Some(f) = rx.recv().await {
             let is_screen = matches!(f, Frame::Screen(_));
-            let res = write_frame(&mut w, &f).await;
+            let res = write_frame(&mut w, &f, Some(&mut write_crypt)).await;
             if is_screen {
                 let _ = screen_q.fetch_update(Ordering::SeqCst, Ordering::SeqCst, |n| Some(n.saturating_sub(1)));
             }
@@ -448,7 +582,7 @@ async fn handle(app: AppHandle, sock: TcpStream, addr: String) {
     loop {
         let fr = tokio::select! {
             _ = &mut kick_rx => break,
-            res = tokio::time::timeout(Duration::from_secs(30), read_frame(&mut r)) => match res {
+            res = tokio::time::timeout(Duration::from_secs(30), read_frame(&mut r, Some(&mut read_crypt))) => match res {
                 Ok(Ok(f)) => f,
                 _ => break,
             },
@@ -844,6 +978,11 @@ async fn send_file(app: AppHandle, tx: mpsc::Sender<Frame>, path: PathBuf) {
 // ---------------------------------------------------------------------------
 // Command untuk UI
 // ---------------------------------------------------------------------------
+/// Port TCP server Link (dipakai ngrok untuk meneruskan tunnel).
+pub fn port(app: &AppHandle) -> u16 {
+    app.state::<LinkState>().cfg.lock().unwrap().port
+}
+
 #[tauri::command]
 pub fn link_info(app: AppHandle) -> Value {
     let (token, port) = {
@@ -960,4 +1099,69 @@ pub fn link_open_received(app: AppHandle, path: Option<String>) -> Result<(), St
         _ => dir,
     };
     super::open_with_shell(&super::strip_verbatim(target).to_string_lossy())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn crypt_roundtrip_and_tamper() {
+        let key = [7u8; 32];
+        let mut a = Crypt::new(&key);
+        let mut b = Crypt::new(&key);
+        for i in 0..3u8 {
+            let msg = vec![i; 10 + i as usize];
+            let sealed = a.seal(&msg);
+            assert_eq!(sealed.len(), msg.len() + 16);
+            assert_eq!(b.open(&sealed).unwrap(), msg);
+        }
+        // frame yang diubah ditolak
+        let mut sealed = a.seal(b"halo");
+        sealed[0] ^= 1;
+        assert!(b.open(&sealed).is_none());
+    }
+
+    #[test]
+    fn replay_is_rejected() {
+        let key = [9u8; 32];
+        let mut a = Crypt::new(&key);
+        let mut b = Crypt::new(&key);
+        let first = a.seal(b"satu");
+        assert!(b.open(&first).is_some());
+        // frame yang sama dikirim ulang: counter penerima sudah maju, jadi gagal
+        assert!(b.open(&first).is_none());
+    }
+
+    #[test]
+    fn keys_depend_on_everything() {
+        let sn = [1u8; 16];
+        let cn = [2u8; 16];
+        let k1 = derive_keys("ABCDEFGH2345", &sn, &cn);
+        let k2 = derive_keys("ABCDEFGH2346", &sn, &cn);
+        let k3 = derive_keys("ABCDEFGH2345", &cn, &sn);
+        assert_ne!(k1.auth, k2.auth);
+        assert_ne!(k1.auth, k3.auth);
+        assert_ne!(k1.c2s, k1.s2c);
+        let p = to_hex(&proof_for(&k1, b"C", &sn, &cn));
+        assert!(proof_ok(&k1, b"C", &sn, &cn, &p));
+        assert!(!proof_ok(&k1, b"S", &sn, &cn, &p)); // bukti HP tidak bisa dipakai sebagai bukti PC
+        assert!(!proof_ok(&k2, b"C", &sn, &cn, &p));
+    }
+
+    /// Vektor tetap, dipakai juga oleh tes Kotlin (Proto.kt) supaya kedua sisi pasti sama.
+    #[test]
+    fn cross_language_vector() {
+        let sn: Vec<u8> = (0u8..16).collect();
+        let cn: Vec<u8> = (100u8..116).collect();
+        let k = derive_keys("ABCDEFGH2345", &sn, &cn);
+        let mut enc = Crypt::new(&k.s2c);
+        let sealed = enc.seal(b"\x00{\"t\":\"ping\"}");
+        println!("VEC auth={}", to_hex(&k.auth));
+        println!("VEC c2s={}", to_hex(&k.c2s));
+        println!("VEC s2c={}", to_hex(&k.s2c));
+        println!("VEC proofC={}", to_hex(&proof_for(&k, b"C", &sn, &cn)));
+        println!("VEC proofS={}", to_hex(&proof_for(&k, b"S", &sn, &cn)));
+        println!("VEC sealed={}", to_hex(&sealed));
+    }
 }

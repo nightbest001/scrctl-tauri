@@ -26,6 +26,19 @@ object Prefs {
     fun screenQuality(c: Context): Int = sp(c).getInt("screen_quality", 1)
     fun setScreenQuality(c: Context, v: Int) { sp(c).edit().putInt("screen_quality", v).apply() }
 
+    /** Kode untuk mode "HP ini bisa dikontrol". Dibuat sekali, bisa diganti dari layar mode itu. */
+    fun hostToken(c: Context): String {
+        val cur = sp(c).getString("host_token", null)
+        if (cur != null && cur.length == 12) return cur
+        return regenHostToken(c)
+    }
+
+    fun regenHostToken(c: Context): String {
+        val t = HostCode.generate()
+        sp(c).edit().putString("host_token", t).apply()
+        return t
+    }
+
     fun setEnabled(c: Context, on: Boolean) {
         sp(c).edit().putBoolean("enabled", on).apply()
     }

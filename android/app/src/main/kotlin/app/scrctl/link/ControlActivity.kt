@@ -127,7 +127,9 @@ private fun ControlScreen(onBack: () -> Unit) {
     val frame by remote.frame.collectAsState()
     val connected = ui.conn == Conn.Connected
 
-    var mode by rememberSaveable { mutableStateOf(0) } // 0 touchpad, 1 layar PC
+    val phone = pc.kind == "phone"
+    var modeSel by rememberSaveable { mutableStateOf(0) } // 0 touchpad, 1 layar PC
+    val mode = if (phone) 1 else modeSel // HP target selalu lewat layar: sentuh langsung
     var panel by rememberSaveable { mutableStateOf(0) } // 0 ketik, 1 pintasan, 2 media, 3 setelan
     var immersive by rememberSaveable { mutableStateOf(false) }
     var speed by remember { mutableStateOf(Prefs.padSpeed(ctx)) }
@@ -150,12 +152,12 @@ private fun ControlScreen(onBack: () -> Unit) {
     Column(Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 8.dp)) {
         if (!immersive || !allowed) {
             TopBar(
-                title = "Kontrol PC",
+                title = if (phone) "Kontrol HP" else "Kontrol PC",
                 subtitle = ui.pc ?: "Tidak terhubung",
                 mode = mode,
-                onMode = { mode = it },
+                onMode = { modeSel = it },
                 onBack = onBack,
-                showMode = allowed,
+                showMode = allowed && !phone,
             )
             Spacer(Modifier.height(8.dp))
         }
@@ -186,11 +188,18 @@ private fun ControlScreen(onBack: () -> Unit) {
             } else {
                 PadSurface(
                     modifier = Modifier.fillMaxSize(),
-                    absolute = true, frame = frame, speed = speed, natural = natural,
+                    absolute = true, frame = frame, speed = speed, natural = natural, phone = phone,
                 )
+                if (phone && !pc.input) {
+                    Text(
+                        "Layanan Aksesibilitas di HP target belum aktif. Layar tampil, tapi sentuhan belum bisa dijalankan.",
+                        style = OrbitText.Caption, color = Orbit.Warn,
+                        modifier = Modifier.align(Alignment.BottomCenter).padding(12.dp),
+                    )
+                }
                 if (frame == null) {
                     Text(
-                        "Menyambung ke layar PC…",
+                        if (phone) "Menyambung ke layar HP…" else "Menyambung ke layar PC…",
                         style = OrbitText.Caption,
                         modifier = Modifier.align(Alignment.Center),
                     )
@@ -211,7 +220,8 @@ private fun ControlScreen(onBack: () -> Unit) {
 
         if (!immersive) {
             Spacer(Modifier.height(8.dp))
-            Segmented(listOf("Ketik", "Pintasan", "Media", "Setelan"), panel, { panel = it }, Modifier.fillMaxWidth())
+            val panels = if (phone) listOf("Navigasi", "Ketik", "Media", "Setelan") else listOf("Ketik", "Pintasan", "Media", "Setelan")
+            Segmented(panels, panel, { panel = it }, Modifier.fillMaxWidth())
             Spacer(Modifier.height(8.dp))
             Column(
                 Modifier
@@ -219,10 +229,11 @@ private fun ControlScreen(onBack: () -> Unit) {
                     .heightIn(max = 210.dp)
                     .verticalScroll(rememberScrollState()),
             ) {
-                when (panel) {
-                    0 -> TypePanel()
-                    1 -> ShortcutPanel()
-                    2 -> MediaPanel()
+                when (panels[panel]) {
+                    "Navigasi" -> NavPanel()
+                    "Ketik" -> TypePanel()
+                    "Pintasan" -> ShortcutPanel()
+                    "Media" -> MediaPanel()
                     else -> SettingsPanel(
                         speed = speed, onSpeed = { speed = it; Prefs.setPadSpeed(ctx, it) },
                         natural = natural, onNatural = { natural = it; Prefs.setNaturalScroll(ctx, it) },
@@ -302,6 +313,7 @@ private fun PadSurface(
     frame: ScreenFrame?,
     speed: Int,
     natural: Boolean,
+    phone: Boolean = false,
 ) {
     val remote = LinkHub.pc
     val haptic = LocalHapticFeedback.current
@@ -319,7 +331,7 @@ private fun PadSurface(
             .background(if (absolute) Color.Black else Orbit.Surface)
             .border(1.dp, Orbit.Line, shape)
             .onSizeChanged { box = it }
-            .pointerInput(absolute) {
+            .pointerInput(absolute, phone) {
                 val slop = viewConfiguration.touchSlop
 
                 // posisi sentuh -> 0..1 terhadap gambar layar PC
@@ -418,6 +430,11 @@ private fun PadSurface(
                             if (!moved && (c.position - start).getDistance() > slop) {
                                 moved = true
                                 if (armedDrag) {
+                                    remote.button("left", true)
+                                    dragging = true
+                                } else if (absolute && phone && maxPointers == 1 && !dragging) {
+                                    // layar HP: geser langsung = seret/geser di HP target
+                                    sendAbs(start, true)
                                     remote.button("left", true)
                                     dragging = true
                                 }
@@ -628,6 +645,24 @@ private fun TypePanel() {
                 KeyButton(k.second, Modifier.width(64.dp)) { press(k.first) }
             }
         }
+    }
+}
+
+@Composable
+private fun NavPanel() {
+    val remote = LinkHub.pc
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            KeyButton("Kembali", Modifier.weight(1f)) { remote.nav("back") }
+            KeyButton("Beranda", Modifier.weight(1f)) { remote.nav("home") }
+            KeyButton("Terbaru", Modifier.weight(1f)) { remote.nav("recents") }
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            KeyButton("Notifikasi", Modifier.weight(1f)) { remote.nav("notif") }
+            KeyButton("Pengaturan cepat", Modifier.weight(1.3f)) { remote.nav("quick") }
+            KeyButton("Kunci layar", Modifier.weight(1f)) { remote.nav("lock") }
+        }
+        Text("Ketuk layar = klik. Geser = geser di HP target. Tahan lalu lepas = tekan lama. Ketuk dua jari = Kembali.", style = OrbitText.Caption)
     }
 }
 

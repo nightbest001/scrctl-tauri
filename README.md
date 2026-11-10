@@ -31,7 +31,19 @@ Tauri v2: backend ditulis dengan Rust, antarmuka dengan HTML/CSS/JS.
 - Layar PC di app HP: sentuh untuk klik, tahan lalu geser untuk seret. Ada pilihan kualitas dan mode layar penuh.
 - Default mati. Nyalakan di Orbit: menu **Link HP**, bagian **Kontrol PC dari HP**. Saat layar PC dikirim, tanda muncul di title bar Orbit.
 
-Belum didukung: MMS, suara panggilan di PC, dan enkripsi data Link.
+**Kontrol HP ke HP (Orbit Link)**
+- Di HP target: buka **HP ini bisa dikontrol**, nyalakan layanan Aksesibilitas Orbit Link, tekan **Mulai** (Android meminta izin rekam layar), lalu catat alamat (`ip:5589`) dan kode 12 karakter.
+- Di HP pengontrol: isi alamat dan kode itu di kolom koneksi Orbit Link, lalu buka **Kontrol PC**. Layar HP target tampil, ketuk untuk klik, geser untuk menggeser, tahan untuk tekan lama, dua jari untuk Kembali.
+- Tombol Kembali, Beranda, Terbaru, Notifikasi, Pengaturan cepat, dan Kunci layar ada di tab Navigasi. Ketik, volume, dan media juga bisa.
+- Syarat: kedua HP satu jaringan (mis. hotspot salah satunya), tanpa internet. Data dienkripsi dengan protokol yang sama seperti ke PC.
+- Batasan: geseran dijalankan saat jari dilepas, hanya layar utama dalam orientasi saat mulai, dan layar tidak tampil jika izin rekam layar ditolak.
+
+**Akses jarak jauh (ngrok)**
+- Orbit menjalankan ngrok dari PC kamu sendiri (`ngrok tcp 5588`) dan menampilkan alamat publiknya. Isi alamat itu di app Orbit Link seperti alamat WiFi.
+- Orbit mendeteksi apakah ngrok sudah terpasang. Kalau belum, tombol **Pasang ngrok** memasangnya otomatis (winget, atau unduhan resmi ke folder data Orbit). Perlu authtoken dari dashboard.ngrok.com. Tunnel TCP bisa meminta akun terverifikasi. Alternatif tanpa itu: Tailscale.
+- ngrok hanya meneruskan data yang sudah terenkripsi. Pakai kualitas layar Hemat untuk koneksi jarak jauh.
+
+Belum didukung: MMS, suara panggilan di PC, dan layar PC selain monitor utama.
 
 ## Unduh
 
@@ -52,9 +64,12 @@ Build terbaru ada di halaman [Releases](https://github.com/nightbest001/scrctl-t
 
 Persyaratan: Windows 10/11 dengan WebView2 untuk PC, Android 8.0 (API 26) atau lebih baru untuk app Link.
 
-> **Keamanan.** Kode pairing tidak dikirim lewat jaringan (handshake HMAC-SHA256), tetapi isi data Link
-> belum dienkripsi. Itu termasuk ketikan keyboard dan gambar layar saat Kontrol PC dari HP dinyalakan. Gunakan hanya di jaringan WiFi yang dipercaya. Windows dapat meminta izin firewall
-> saat pertama kali dijalankan (port TCP 5588).
+> **Keamanan.** Link memakai protokol v2: HP dan PC saling membuktikan kode lewat HMAC-SHA256, kunci sesi
+> diturunkan dengan PBKDF2 (100.000 putaran) dan seluruh data sesudah handshake dienkripsi AES-256-GCM
+> (satu kunci per arah, penghitung nonce, anti-replay). Kode baru panjangnya 12 karakter, dan 5 kode salah
+> berturut-turut mengunci port selama 30 detik. Kekuatan sistem tetap bergantung pada kode: jangan bagikan,
+> dan buat kode baru jika bocor. Authtoken ngrok disimpan polos di folder data Orbit. HP lama (v1)
+> tidak kompatibel, perbarui APK. Windows dapat meminta izin firewall saat pertama kali dijalankan (port TCP 5588).
 
 Android 13+ dapat memblokir dialog izin untuk app yang dipasang dari luar Play Store. Jika itu terjadi,
 buka Info app → ⋮ → **Izinkan setelan terbatas**, lalu ulangi. APK ditandatangani dengan debug key,
