@@ -206,7 +206,7 @@ class MainActivity : ComponentActivity() {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     val idle = ui.conn == Conn.Stopped || ui.conn == Conn.AuthFailed
                     if (idle) {
-                        Text("Buka Orbit di PC, menu Link HP, lalu isi alamat dan kode yang tampil di sana. Dari luar WiFi, pakai alamat ngrok (contoh 0.tcp.ap.ngrok.io:12345). Untuk HP lain, isi alamat dan kode dari layar "HP ini bisa dikontrol".", style = OrbitText.Caption)
+                        Text("Buka Orbit di PC, menu Link HP, lalu isi alamat dan kode yang tampil di sana. Dari luar WiFi, pakai alamat ngrok (contoh 0.tcp.ap.ngrok.io:12345). Untuk HP lain, isi alamat dan kode dari layar HP ini bisa dikontrol.", style = OrbitText.Caption)
                         OutlinedTextField(
                             value = host, onValueChange = { host = it },
                             label = { Text("Alamat PC") },

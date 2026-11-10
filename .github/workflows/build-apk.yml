@@ -54,8 +54,16 @@ jobs:
           name: Orbit-Link-v${{ env.APP_VERSION }}
           path: Orbit-Link-v${{ env.APP_VERSION }}.apk
 
+      - name: Catatan rilis (dari CHANGELOG.md)
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          awk -v t="## ${GITHUB_REF_NAME}" 'index($0,t)==1{f=1;next} /^## /{f=0} f' CHANGELOG.md > release-notes.md
+          [ -s release-notes.md ] || awk '/^## Belum dirilis/{f=1;next} /^## /{f=0} f' CHANGELOG.md > release-notes.md
+
       - name: Attach to GitHub Release (tag v*)
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
+          body_path: release-notes.md
           files: Orbit-Link-v${{ env.APP_VERSION }}.apk
