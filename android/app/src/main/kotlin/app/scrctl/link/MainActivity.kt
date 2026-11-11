@@ -25,7 +25,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -51,6 +53,8 @@ import kotlinx.coroutines.withContext
 class MainActivity : ComponentActivity() {
 
     private val resumeTick = mutableIntStateOf(0)
+    /** Target dari QR atau tautan, menunggu konfirmasi pengguna sebelum menyambung. */
+    private val pendingLink = mutableStateOf<Pairing.Target?>(null)
     private val askNotif = registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
     private val askCamera = registerForActivityResult(ActivityResultContracts.RequestPermission()) {
         resumeTick.intValue++
@@ -79,6 +83,33 @@ class MainActivity : ComponentActivity() {
                 Surface(modifier = Modifier.fillMaxSize(), color = Orbit.Bg) { Home() }
             }
         }
+        handleLinkIntent(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleLinkIntent(intent)
+    }
+
+    /** Tautan orbit://connect dari kamera bawaan atau app lain: tampilkan konfirmasi, jangan langsung sambung. */
+    private fun handleLinkIntent(i: Intent?) {
+        if (i?.action != Intent.ACTION_VIEW) return
+        val raw = i.dataString ?: return
+        val t = Pairing.parse(raw)
+        if (t == null) toast("Tautan Orbit tidak valid") else pendingLink.value = t
+        i.data = null // jangan diproses ulang saat Activity dibuat ulang
+    }
+
+    private fun scanQr() {
+        Pairing.scan(
+            this,
+            onText = { raw ->
+                val t = Pairing.parse(raw)
+                if (t == null) toast("QR ini bukan dari Orbit") else pendingLink.value = t
+            },
+            onError = { toast(it) },
+        )
     }
 
     override fun onResume() {
@@ -161,6 +192,24 @@ class MainActivity : ComponentActivity() {
         }
         val connected = ui.conn == Conn.Connected
 
+        pendingLink.value?.let { t ->
+            AlertDialog(
+                onDismissRequest = { pendingLink.value = null },
+                title = { Text("Hubungkan ke ${t.host}:${t.port}?") },
+                text = { Text("Hanya sambungkan jika alamat ini milik PC atau HP kamu sendiri. Setelah terhubung, notifikasi dan data HP bisa dikirim ke perangkat itu.") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        pendingLink.value = null
+                        host = if (t.port == 5588) t.host else "${t.host}:${t.port}"
+                        code = t.code
+                        if (ui.conn != Conn.Stopped && ui.conn != Conn.AuthFailed) disconnect()
+                        connect(t.host, t.port, t.code)
+                    }) { Text("Hubungkan") }
+                },
+                dismissButton = { TextButton(onClick = { pendingLink.value = null }) { Text("Batal") } },
+            )
+        }
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -206,7 +255,8 @@ class MainActivity : ComponentActivity() {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     val idle = ui.conn == Conn.Stopped || ui.conn == Conn.AuthFailed
                     if (idle) {
-                        Text("Buka Orbit di PC, menu Link HP, lalu isi alamat dan kode yang tampil di sana. Dari luar WiFi, pakai alamat ngrok (contoh 0.tcp.ap.ngrok.io:12345). Untuk HP lain, isi alamat dan kode dari layar HP ini bisa dikontrol.", style = OrbitText.Caption)
+                        Text("Buka Orbit di PC, menu Link HP, lalu pindai QR atau isi alamat dan kode yang tampil di sana. Dari luar WiFi, pakai alamat ngrok (contoh 0.tcp.ap.ngrok.io:12345). Untuk HP lain, isi alamat dan kode dari layar HP ini bisa dikontrol.", style = OrbitText.Caption)
+                        PrimaryButton("Pindai QR", { scanQr() }, Modifier.fillMaxWidth())
                         OutlinedTextField(
                             value = host, onValueChange = { host = it },
                             label = { Text("Alamat PC") },
@@ -224,7 +274,10 @@ class MainActivity : ComponentActivity() {
                             colors = fieldColors(),
                             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters),
                         )
-                        PrimaryButton("Hubungkan", {
+                        SecondaryButton("Hubungkan", {
+                            // kolom alamat boleh diisi tautan orbit:// utuh (hasil Salin tautan di PC)
+                            val full = if (host.trim().startsWith("orbit://", ignoreCase = true)) Pairing.parse(host) else null
+                            if (full != null) { connect(full.host, full.port, full.code); return@SecondaryButton }
                             val hp = parseHost(host)
                             val tk = Proto.normalizeToken(code)
                             if (hp == null || tk.length < 8 || tk.length > 16) toast("Isi alamat PC dan kode dari Orbit")

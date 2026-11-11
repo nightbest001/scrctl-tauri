@@ -621,3 +621,11 @@ input:focus, select:focus { border-color:var(--blue); }
 #ngToken { width:100%; margin:6px 0 12px; }
 #ngInstall, #ngErr { margin:12px 0; }
 #ngAddrWrap { margin-bottom:12px; }
+
+/* QR sambung HP */
+.qr-box { margin-top:12px; display:flex; flex-direction:column; align-items:center; gap:10px; }
+.qr-box canvas { width:220px; height:220px; image-rendering:pixelated; border-radius:10px; background:#fff; }
+.qr-src { display:flex; gap:8px; width:100%; }
+.qr-src .btn { flex:1; }
+.qr-src .btn.on { background:var(--blue); }
+.qr-box .link-note { margin:0; text-align:center; }

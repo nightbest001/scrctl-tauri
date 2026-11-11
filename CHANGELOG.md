@@ -5,6 +5,16 @@ Kalau bagian itu tidak ada, dipakai bagian `## Belum dirilis`. Ganti judul bagia
 
 ## Belum dirilis
 
+### Ditambahkan
+- Akses jarak jauh punya pilihan **cara sambung**: **UPnP** (PC meminta router membuka port Link, tanpa akun dan tanpa server pihak ketiga) atau **ngrok**. Pilihan diingat. Port ditutup lagi saat dimatikan atau Orbit ditutup.
+- Sambung lewat QR atau kode. Orbit di PC punya tombol **Tampilkan QR** (WiFi atau ngrok) dan **Salin tautan**. QR hilang sendiri setelah 60 detik.
+- App Orbit Link punya tombol **Pindai QR**. Layar **HP ini bisa dikontrol** juga menampilkan QR untuk HP pengontrol.
+- Tautan `orbit://connect?host=IP:PORT&code=KODE` bisa dibuka dari app lain atau ditempel di kolom alamat. Selalu ada konfirmasi sebelum menyambung.
+
+### Diperbaiki
+- ngrok gagal dengan `Error reading configuration file ... unknown version '3'`. Orbit sekarang memakai config ngrok sendiri (`ngrok-orbit.yml`, versi 2, terbaca ngrok 2 dan 3), mengambil authtoken lama dari config bawaan kalau ada, dan mengunduh ngrok v3 otomatis kalau yang terpasang masih v2.
+- Kartu Beranda menampilkan nama HP Link yang sebenarnya, bukan nama device ADB lama yang tersimpan. Nama HP Link sekarang memakai merek (contoh: `vivo V2109`).
+
 ## v0.8.5
 
 ### Diperbaiki

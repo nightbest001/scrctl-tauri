@@ -102,6 +102,12 @@ fn set_err(app: &AppHandle, msg: impl Into<String>) {
 
 /// Ubah baris log ngrok yang berisi galat menjadi pesan yang bisa dipahami.
 fn friendly_error(line: &str) -> Option<String> {
+    if line.contains("Error reading configuration file") || line.contains("unknown version") {
+        return Some("Config ngrok bawaan tidak cocok dengan versi ngrok. Orbit sudah memakai config sendiri; matikan lalu nyalakan lagi.".into());
+    }
+    if line.contains("ERR_NGROK_121") || line.contains("agent version") && line.contains("too old") {
+        return Some("Versi ngrok terlalu lama. Tekan Pasang ngrok untuk memakai versi 3, atau pakai UPnP.".into());
+    }
     if line.contains("ERR_NGROK_4018") || line.contains("authentication failed") {
         return Some("Authtoken ngrok kosong atau salah. Salin dari dashboard.ngrok.com, menu Your Authtoken.".into());
     }
@@ -180,6 +186,81 @@ async fn find_tunnel(port: u16) -> Option<String> {
     None
 }
 
+/// Versi utama ngrok (2 atau 3). None kalau tidak terbaca.
+async fn agent_major(exe: &Path) -> Option<u32> {
+    let mut cmd = Command::new(exe);
+    cmd.arg("version").stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::null()).kill_on_drop(true);
+    #[cfg(windows)]
+    cmd.creation_flags(0x0800_0000);
+    let out = tokio::time::timeout(Duration::from_secs(8), cmd.output()).await.ok()?.ok()?;
+    let text = String::from_utf8_lossy(&out.stdout).to_string();
+    let v = text.split("version").nth(1)?.trim().to_string();
+    v.split('.').next()?.trim().parse().ok()
+}
+
+/// Config ngrok milik Orbit sendiri. Config bawaan (%LOCALAPPDATA%\ngrok\ngrok.yml) bisa berversi "3"
+/// sehingga ngrok lama menolaknya ("unknown version '3'"). Versi "2" dibaca oleh ngrok 2 dan 3.
+fn write_cfg(dir: &Path, tok: &str) -> PathBuf {
+    let p = dir.join("ngrok-orbit.yml");
+    let mut s = String::from("version: \"2\"\n");
+    if !tok.is_empty() {
+        s.push_str(&format!("authtoken: \"{}\"\n", tok));
+    }
+    let _ = std::fs::write(&p, s);
+    p
+}
+
+/// Authtoken dari config ngrok bawaan, dipakai kalau Orbit belum menyimpan token sendiri.
+fn existing_token() -> Option<String> {
+    let mut paths: Vec<PathBuf> = Vec::new();
+    for (var, rel) in [
+        ("LOCALAPPDATA", "ngrok/ngrok.yml"),
+        ("APPDATA", "ngrok/ngrok.yml"),
+        ("USERPROFILE", ".ngrok2/ngrok.yml"),
+        ("USERPROFILE", ".config/ngrok/ngrok.yml"),
+        ("HOME", ".config/ngrok/ngrok.yml"),
+        ("HOME", ".ngrok2/ngrok.yml"),
+    ] {
+        if let Some(b) = std::env::var_os(var) {
+            paths.push(PathBuf::from(b).join(rel));
+        }
+    }
+    for p in paths {
+        if let Ok(t) = std::fs::read_to_string(&p) {
+            for line in t.lines() {
+                if let Some(v) = line.trim().strip_prefix("authtoken:") {
+                    let v = v.trim().trim_matches('"').trim_matches('\'');
+                    if !v.is_empty() {
+                        return Some(v.to_string());
+                    }
+                }
+            }
+        }
+    }
+    None
+}
+
+/// Token hanya boleh berisi huruf, angka, garis bawah, dan strip (aman untuk ditulis ke YAML).
+fn clean_token(t: &str) -> String {
+    t.chars().filter(|c| c.is_ascii_alphanumeric() || *c == '_' || *c == '-').collect()
+}
+
+/// Unduh paket resmi ngrok v3 ke folder data Orbit (menimpa ngrok.exe lama di situ).
+async fn download_official(dir: &Path) -> bool {
+    if !cfg!(windows) {
+        return false;
+    }
+    let zip = dir.join("ngrok-download.zip");
+    let script = format!(
+        "$ErrorActionPreference='Stop'; [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12; \
+         Invoke-WebRequest -UseBasicParsing -Uri 'https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip' -OutFile '{z}'; \
+         Expand-Archive -Force -Path '{z}' -DestinationPath '{d}'; Remove-Item -Force '{z}'",
+        z = zip.display(),
+        d = dir.display()
+    );
+    run_quiet("powershell", &["-NoProfile", "-NonInteractive", "-Command", &script], 180).await
+}
+
 /// Jalankan perintah tanpa jendela konsol; true kalau keluar dengan kode 0 sebelum batas waktu.
 async fn run_quiet(prog: &str, args: &[&str], secs: u64) -> bool {
     let mut cmd = Command::new(prog);
@@ -217,16 +298,8 @@ pub async fn ngrok_install(app: AppHandle) -> Value {
     .await
         && find_ngrok(&dir).is_some();
 
-    if !ok && cfg!(windows) {
-        let zip = dir.join("ngrok-download.zip");
-        let script = format!(
-            "$ErrorActionPreference='Stop'; [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12; \
-             Invoke-WebRequest -UseBasicParsing -Uri 'https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip' -OutFile '{z}'; \
-             Expand-Archive -Force -Path '{z}' -DestinationPath '{d}'; Remove-Item -Force '{z}'",
-            z = zip.display(),
-            d = dir.display()
-        );
-        ok = run_quiet("powershell", &["-NoProfile", "-NonInteractive", "-Command", &script], 180).await && find_ngrok(&dir).is_some();
+    if !ok {
+        ok = download_official(&dir).await && find_ngrok(&dir).is_some();
     }
 
     app.state::<NgrokState>().installing.store(false, Ordering::SeqCst);
@@ -251,7 +324,7 @@ pub async fn ngrok_start(app: AppHandle, token: Option<String>) -> Value {
     }
     set_err(&app, "");
     let dir = app.state::<AppState>().data_dir.clone();
-    let exe = match find_ngrok(&dir) {
+    let mut exe = match find_ngrok(&dir) {
         Some(p) => p,
         None => {
             set_err(&app, "ngrok belum terpasang. Tekan Pasang ngrok.");
@@ -259,6 +332,20 @@ pub async fn ngrok_start(app: AppHandle, token: Option<String>) -> Value {
             return status(&app);
         }
     };
+    // ngrok v2 sudah ditolak server ngrok dan tidak bisa membaca config v3: pakai v3
+    if agent_major(&exe).await.map_or(false, |m| m < 3) {
+        log(&app, "ngrok lama (v2) terdeteksi, mengunduh ngrok v3", false);
+        if download_official(&dir).await {
+            if let Some(p) = find_ngrok(&dir) {
+                exe = p;
+            }
+        }
+        if agent_major(&exe).await.map_or(false, |m| m < 3) {
+            set_err(&app, "ngrok di komputer ini versi lama (v2) dan gagal diperbarui otomatis. Pasang ngrok v3 dari ngrok.com/download, atau pakai UPnP.");
+            push(&app);
+            return status(&app);
+        }
+    }
     let tok = match token.map(|t| t.trim().to_string()).filter(|t| !t.is_empty()) {
         Some(t) => {
             write_json(&token_path(&dir), &json!({ "token": t }));
@@ -266,10 +353,14 @@ pub async fn ngrok_start(app: AppHandle, token: Option<String>) -> Value {
         }
         None => saved_token(&dir),
     };
+    let tok = clean_token(&tok);
+    let tok = if tok.is_empty() { clean_token(&existing_token().unwrap_or_default()) } else { tok };
+    let cfg = write_cfg(&dir, &tok);
     let port = link::port(&app);
 
     let mut cmd = Command::new(&exe);
-    cmd.args(["tcp", &port.to_string(), "--log", "stdout", "--log-format", "logfmt"])
+    cmd.args(["tcp", &port.to_string(), "--log", "stdout", "--log-format", "logfmt", "--config"])
+        .arg(&cfg)
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())

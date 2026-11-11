@@ -33,6 +33,7 @@ use tokio::sync::{mpsc, oneshot, Mutex as AsyncMutex};
 
 mod link;
 mod ngrok;
+mod upnp;
 
 macro_rules! args {
     ($($x:expr),* $(,)?) => {
@@ -1894,6 +1895,7 @@ fn main() {
             let adb = find_adb(app.handle());
             app.manage(link::init(&data_dir));
             app.manage(ngrok::init());
+            app.manage(upnp::init());
             app.manage(AppState {
                 data_dir,
                 adb,
@@ -1979,6 +1981,9 @@ fn main() {
             ngrok::ngrok_stop,
             ngrok::ngrok_install,
             ngrok::ngrok_forget_token,
+            upnp::upnp_status,
+            upnp::upnp_start,
+            upnp::upnp_stop,
             phone::phone_toggle,
             phone::phone_open_app,
             phone::deck_get,
@@ -1992,6 +1997,7 @@ fn main() {
         .run(|app, event| {
             if let tauri::RunEvent::Exit = event {
                 ngrok::shutdown(app); // jangan tinggalkan ngrok.exe yatim
+                upnp::shutdown(app); // tutup port di router
             }
         });
 }

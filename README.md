@@ -33,7 +33,7 @@ Tauri v2: backend ditulis dengan Rust, antarmuka dengan HTML/CSS/JS.
 
 **Kontrol HP ke HP (Orbit Link)**
 - Di HP target: buka **HP ini bisa dikontrol**, nyalakan layanan Aksesibilitas Orbit Link, tekan **Mulai** (Android meminta izin rekam layar), lalu catat alamat (`ip:5589`) dan kode 12 karakter.
-- Di HP pengontrol: isi alamat dan kode itu di kolom koneksi Orbit Link, lalu buka **Kontrol PC**. Layar HP target tampil, ketuk untuk klik, geser untuk menggeser, tahan untuk tekan lama, dua jari untuk Kembali.
+- Di HP pengontrol: isi alamat dan kode itu di kolom koneksi Orbit Link, atau tekan **Pindai QR** dan arahkan ke QR di layar HP target, lalu buka **Kontrol PC**. Layar HP target tampil, ketuk untuk klik, geser untuk menggeser, tahan untuk tekan lama, dua jari untuk Kembali.
 - Tombol Kembali, Beranda, Terbaru, Notifikasi, Pengaturan cepat, dan Kunci layar ada di tab Navigasi. Ketik, volume, dan media juga bisa.
 - Syarat: kedua HP satu jaringan (mis. hotspot salah satunya), tanpa internet. Data dienkripsi dengan protokol yang sama seperti ke PC.
 - Batasan: geseran dijalankan saat jari dilepas, hanya layar utama dalam orientasi saat mulai, dan layar tidak tampil jika izin rekam layar ditolak.
@@ -59,10 +59,14 @@ Build terbaru ada di halaman [Releases](https://github.com/nightbest001/scrctl-t
 
 1. Jalankan Orbit di PC.
 2. Untuk mirroring, aktifkan USB debugging di HP lalu ikuti menu **Setup**.
-3. Untuk Orbit Link, pasang APK di HP, buka menu **Link HP** di Orbit, lalu isi alamat dan kode yang tampil di app HP.
+3. Untuk Orbit Link, pasang APK di HP, buka menu **Link HP** di Orbit, lalu isi alamat dan kode di app HP, atau tekan **Tampilkan QR** di Orbit dan **Pindai QR** di app HP.
 4. Di app Link, buka bagian **Izin** dan aktifkan akses yang dibutuhkan. Setiap fitur sensitif (kamera, pesan, telepon, foto) punya toggle sendiri yang bisa dimatikan kapan saja.
 
 Persyaratan: Windows 10/11 dengan WebView2 untuk PC, Android 8.0 (API 26) atau lebih baru untuk app Link.
+
+> **QR.** Isi QR sama dengan alamat dan kode (`orbit://connect?host=IP:PORT&code=KODE`), jadi perlakukan seperti kode:
+> jangan tampilkan di tempat umum atau saat berbagi layar. App HP selalu meminta konfirmasi sebelum menyambung dari QR atau tautan.
+> Pemindai memakai Google Code Scanner (perlu Google Play Services); tanpa itu, isi manual.
 
 > **Keamanan.** Link memakai protokol v2: HP dan PC saling membuktikan kode lewat HMAC-SHA256, kunci sesi
 > diturunkan dengan PBKDF2 (100.000 putaran) dan seluruh data sesudah handshake dienkripsi AES-256-GCM

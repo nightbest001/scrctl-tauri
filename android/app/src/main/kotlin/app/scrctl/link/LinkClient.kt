@@ -105,7 +105,7 @@ class LinkClient(context: Context, private val scope: CoroutineScope) {
                 .put("ver", Proto.VERSION)
                 .put("cnonce", Proto.hex(cNonce))
                 .put("proof", Proto.hex(Proto.proof(keys, "C", sNonce, cNonce)))
-                .put("name", Build.MODEL),
+                .put("name", deviceName()),
             plain = true,
         )
         val resp = readJson(din, null)
@@ -300,4 +300,12 @@ class LinkClient(context: Context, private val scope: CoroutineScope) {
         if (f.kind != 0) throw IOException("bukan JSON")
         return JSONObject(String(f.body, Charsets.UTF_8))
     }
+}
+
+/** "V2109" saja membingungkan; tambahkan merek: "vivo V2109", "Redmi Note 8 Pro". */
+internal fun deviceName(): String {
+    val brand = Build.MANUFACTURER.orEmpty().trim()
+    val model = Build.MODEL.orEmpty().trim()
+    if (model.isEmpty()) return brand.ifEmpty { "HP" }
+    return if (brand.isEmpty() || model.startsWith(brand, ignoreCase = true)) model else "$brand $model"
 }

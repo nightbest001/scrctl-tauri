@@ -40,6 +40,13 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- Tautan sambung dari QR: orbit://connect?host=IP:PORT&code=KODE -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="orbit" android:host="connect" />
+            </intent-filter>
         </activity>
 
         <!-- Kontrol PC: touchpad, keyboard, layar PC -->

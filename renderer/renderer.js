@@ -868,24 +868,54 @@ $('pcCtlToggle').addEventListener('change', async (e) => {
   catch (err) { e.target.checked = !on; toast('Gagal mengubah pengaturan', true); }
 });
 let ng = { running: false };
-function applyNgrok(next) {
-  ng = Object.assign({}, ng, next);
-  const busy = ng.running && !ng.url && !ng.err;
-  $('ngToggle').checked = !!ng.running;
-  $('ngStatus').textContent = ng.url ? 'Aktif. HP bisa terhubung dari mana saja.'
-    : busy ? 'Menyambung ke ngrok…' : ng.running ? 'Menunggu alamat…' : 'Dimatikan';
-  $('ngStatus').classList.toggle('link-ok', !!ng.url);
-  $('ngAddrWrap').classList.toggle('hidden', !ng.url);
-  if (ng.url) $('ngAddr').textContent = ng.url;
+let up = { running: false, busy: false };
+let remoteMode = 'upnp';
+try { if (localStorage.getItem('scrctl.remoteMode') === 'ngrok') remoteMode = 'ngrok'; } catch (e) { /* ignore */ }
+const REMOTE_NOTE = {
+  upnp: 'Orbit meminta router membuka port Link. Tanpa akun dan tanpa server pihak ketiga. Butuh UPnP menyala di router dan IP publik asli (bukan CGNAT).',
+  ngrok: 'Pakai ngrok di PC ini untuk menghubungkan HP dari luar WiFi. Tunnel berjalan dari PC kamu sendiri, dan isi data tetap dienkripsi end-to-end dengan kode Link. Cocok kalau UPnP tidak jalan.'
+};
+// alamat jarak jauh yang sedang aktif (UPnP atau ngrok)
+function remoteUrl() { return (up && up.url) || (ng && ng.url) || ''; }
+function renderRemote() {
+  const upMode = remoteMode === 'upnp';
+  const cur = upMode ? up : ng;
+  const anyOn = !!(ng.running || up.running || up.busy);
+  $('remoteMode').value = remoteMode;
+  $('remoteMode').disabled = anyOn;
+  $('remoteNote').textContent = REMOTE_NOTE[remoteMode];
+  $('ngBox').classList.toggle('hidden', upMode);
+  $('ngToggle').checked = !!(cur.running || (upMode && cur.busy));
+  const waiting = upMode ? !!cur.busy : (ng.running && !ng.url && !ng.err);
+  let text = 'Dimatikan';
+  if (cur.url) text = 'Aktif. HP bisa terhubung dari mana saja.';
+  else if (upMode && cur.busy) text = 'Mencari router (UPnP)…';
+  else if (waiting) text = 'Menyambung ke ngrok…';
+  else if (!upMode && ng.running) text = 'Menunggu alamat…';
+  if (!upMode && ng.installing) text = 'Memasang ngrok…';
+  $('ngStatus').textContent = text;
+  $('ngStatus').classList.toggle('link-ok', !!cur.url);
+  $('ngAddrWrap').classList.toggle('hidden', !cur.url);
+  if (cur.url) $('ngAddr').textContent = cur.url;
   $('ngInstall').classList.toggle('hidden', ng.installed !== false);
   $('ngInstallBtn').disabled = !!ng.installing;
   $('ngInstallBtn').textContent = ng.installing ? 'Memasang…' : 'Pasang ngrok';
-  if (ng.installing) $('ngStatus').textContent = 'Memasang ngrok…';
-  $('ngErr').classList.toggle('hidden', !ng.err);
-  $('ngErr').textContent = ng.err || '';
+  const err = cur.err || '';
+  $('ngErr').classList.toggle('hidden', !err);
+  $('ngErr').textContent = err;
   $('ngForget').disabled = !ng.has_token;
   $('ngToken').placeholder = ng.has_token ? 'Token tersimpan. Isi untuk menggantinya' : 'Kosongkan jika sudah diatur di ngrok';
 }
+function applyNgrok(next) { ng = Object.assign({}, ng, next); renderRemote(); }
+function applyUpnp(next) { up = Object.assign({}, up, next); renderRemote(); }
+window.api.onUpnpState((s) => applyUpnp(s));
+window.api.upnpStatus().then(applyUpnp).catch(() => {});
+$('remoteMode').addEventListener('change', (e) => {
+  remoteMode = e.target.value === 'ngrok' ? 'ngrok' : 'upnp';
+  try { localStorage.setItem('scrctl.remoteMode', remoteMode); } catch (err) { /* ignore */ }
+  renderRemote();
+});
+renderRemote();
 window.api.onNgrokState((s) => applyNgrok(s));
 window.api.ngrokStatus().then(applyNgrok).catch(() => {});
 async function ngInstall() {
@@ -907,8 +937,9 @@ async function ngInstall() {
 $('ngInstallBtn').addEventListener('click', ngInstall);
 $('ngToggle').addEventListener('change', async (e) => {
   const on = e.target.checked;
+  const upMode = remoteMode === 'upnp';
   try {
-    if (on && ng.installed === false) {
+    if (on && !upMode && ng.installed === false) {
       e.target.checked = false;
       await ngInstall();
       return;
@@ -916,20 +947,27 @@ $('ngToggle').addEventListener('change', async (e) => {
     if (on) {
       const ok = await window.api.confirmDialog({
         title: 'Akses jarak jauh',
-        message: 'PC ini akan bisa dijangkau dari internet lewat tunnel ngrok.',
+        message: upMode ? 'Port Link di router akan dibuka ke internet (UPnP).' : 'PC ini akan bisa dijangkau dari internet lewat tunnel ngrok.',
         detail: 'Data Link dienkripsi, tapi siapa pun yang tahu kode bisa mencoba terhubung. Pakai kode yang kuat dan matikan saat tidak dipakai.',
         ok: 'Nyalakan'
       });
       if (!ok) { e.target.checked = false; return; }
-      applyNgrok({ running: true, url: null, err: '' });
-      const tok = $('ngToken').value.trim();
-      const r = await window.api.ngrokStart(tok);
-      if (tok) $('ngToken').value = '';
-      applyNgrok(r);
+      if (upMode) {
+        applyUpnp({ busy: true, err: '', url: null });
+        applyUpnp(await window.api.upnpStart());
+      } else {
+        applyNgrok({ running: true, url: null, err: '' });
+        const tok = $('ngToken').value.trim();
+        const r = await window.api.ngrokStart(tok);
+        if (tok) $('ngToken').value = '';
+        applyNgrok(r);
+      }
+    } else if (upMode) {
+      applyUpnp(await window.api.upnpStop());
     } else {
       applyNgrok(await window.api.ngrokStop());
     }
-  } catch (err) { e.target.checked = !on; toast('Gagal mengubah ngrok', true); }
+  } catch (err) { e.target.checked = !on; toast('Gagal mengubah akses jarak jauh', true); }
 });
 $('ngCopy').addEventListener('click', async () => {
   try { await navigator.clipboard.writeText($('ngAddr').textContent); toast('Alamat disalin'); } catch (e) { toast('Gagal menyalin', true); }
@@ -943,10 +981,52 @@ $('linkSendFile').addEventListener('click', async () => {
 $('linkCopy').addEventListener('click', async () => {
   try { await navigator.clipboard.writeText($('linkAddr').textContent); toast('Alamat disalin'); } catch (e) { toast('Gagal menyalin', true); }
 });
+// ---- QR sambung HP: orbit://connect?host=IP:PORT&code=KODE ----
+let qrTimer = null;
+let qrMode = 'lan'; // lan | remote
+function linkUrl() {
+  const i = linkInfo || {};
+  const host = qrMode === 'remote' && remoteUrl() ? remoteUrl() : (i.ip ? `${i.ip}:${i.port}` : '');
+  if (!host || !i.token) return '';
+  return `orbit://connect?host=${host}&code=${i.token}`;
+}
+function hideQr() {
+  clearTimeout(qrTimer);
+  $('linkQrBox').classList.add('hidden');
+  $('linkQrBtn').textContent = 'Tampilkan QR';
+}
+function drawQr() {
+  const url = linkUrl();
+  if (!url) { hideQr(); toast('Alamat atau kode belum siap', true); return; }
+  try { window.OrbitQR.draw($('linkQr'), url, 6); } catch (e) { hideQr(); toast('Gagal membuat QR', true); return; }
+  const hasNg = !!remoteUrl();
+  $('linkQrSrc').classList.toggle('hidden', !hasNg);
+  $('qrLan').classList.toggle('on', qrMode === 'lan');
+  $('qrNg').classList.toggle('on', qrMode === 'remote');
+}
+function showQr() {
+  if (qrMode === 'remote' && !remoteUrl()) qrMode = 'lan';
+  $('linkQrBox').classList.remove('hidden');
+  $('linkQrBtn').textContent = 'Sembunyikan QR';
+  drawQr();
+  clearTimeout(qrTimer);
+  qrTimer = setTimeout(hideQr, 60000);
+}
+$('linkQrBtn').addEventListener('click', () => {
+  if ($('linkQrBox').classList.contains('hidden')) showQr(); else hideQr();
+});
+$('qrLan').addEventListener('click', () => { qrMode = 'lan'; drawQr(); });
+$('qrNg').addEventListener('click', () => { qrMode = 'remote'; drawQr(); });
+$('linkCopyUrl').addEventListener('click', async () => {
+  const url = linkUrl();
+  if (!url) { toast('Alamat atau kode belum siap', true); return; }
+  try { await navigator.clipboard.writeText(url); toast('Tautan disalin. Isinya termasuk kode, jangan dibagikan'); } catch (e) { toast('Gagal menyalin', true); }
+});
 $('linkRegen').addEventListener('click', async () => {
   const ok = await window.api.confirmDialog({ title: 'Kode baru', message: 'HP yang sedang terhubung akan terputus dan harus pakai kode baru.', detail: '', ok: 'Buat kode baru' });
   if (!ok) return;
   applyLink(await window.api.linkRegen());
+  hideQr();
   toast('Kode baru dibuat');
 });
 
@@ -963,6 +1043,14 @@ function tlPush(title, sub, icon) {
   timeline = timeline.slice(0, 30);
   try { localStorage.setItem('scrctl.timeline', JSON.stringify(timeline)); } catch (e) { /* ignore */ }
   renderDash();
+}
+
+// Nama model HP dari ADB dan dari Link bisa beda tulisan ("Redmi Note 8 Pro" vs
+// "Xiaomi Redmi Note 8 Pro"), jadi dibandingkan longgar.
+const nrmName = (x) => String(x || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+function sameModel(a, b) {
+  a = nrmName(a); b = nrmName(b);
+  return !!a && !!b && (a === b || a.includes(b) || b.includes(a));
 }
 
 function dashDevice() {
@@ -1029,6 +1117,13 @@ function renderDash() {
   const online = !!dev && dev.state === 'device';
   const mirroring = !!dev && dev.serial === mirroringSerial;
   const pct = L.connected && L.battery != null ? L.battery : null;
+  // Baterai + nama "Link" datang dari HP yang benar-benar terhubung. Kalau HP itu
+  // bukan device ADB yang dipilih (mis. device lama tersimpan), hero harus
+  // menampilkan HP Link, bukan nama device ADB yang salah.
+  const linkOnly = !!L.connected && !(dev && sameModel(dev.name, L.name));
+  const adbText = linkOnly
+    ? (dev ? `ADB: ${dev.name || dev.ip || dev.serial} ${online ? 'terhubung' : 'offline'}` : 'ADB belum disetel')
+    : mirroring ? 'Sedang mirror' : online ? 'ADB terhubung' : 'ADB offline';
 
   // Hero
   const hero = $('hero');
@@ -1036,10 +1131,10 @@ function renderDash() {
   hero.append(
     h('div', { class: 'phone' }, BAT.set(pct, !!(L.connected && L.charging))),
     h('div', { class: 'hero-info' },
-      h('div', { class: 'hero-name' }, dev ? (dev.name || dev.ip || dev.serial) : 'Belum ada HP'),
-      h('div', { class: 'hero-sub' }, dev ? (dev.usb ? 'USB' : (dev.ip ? `${dev.ip}:${dev.wdOn && dev.livePort ? dev.livePort : dev.port}` : dev.serial)) : 'Tambahkan lewat Setup atau klik HP yang terdeteksi di bawah.'),
+      h('div', { class: 'hero-name' }, linkOnly ? L.name : dev ? (dev.name || dev.ip || dev.serial) : 'Belum ada HP'),
+      h('div', { class: 'hero-sub' }, linkOnly ? 'Terhubung lewat Link' : dev ? (dev.usb ? 'USB' : (dev.ip ? `${dev.ip}:${dev.wdOn && dev.livePort ? dev.livePort : dev.port}` : dev.serial)) : 'Tambahkan lewat Setup atau klik HP yang terdeteksi di bawah.'),
       h('div', { class: 'chips2' },
-        h('span', { class: 'chip2' }, h('span', { class: 'dot' + (online ? ' on' : '') }), mirroring ? 'Sedang mirror' : online ? 'ADB terhubung' : 'ADB offline'),
+        h('span', { class: 'chip2' }, h('span', { class: 'dot' + (online ? ' on' : '') }), adbText),
         h('span', { class: 'chip2' }, h('span', { class: 'dot' + (L.connected ? ' on' : '') }), L.connected ? `Link: ${L.name}` : 'Link menunggu'),
         L.connected && L.charging && h('span', { class: 'chip2' }, h('span', { class: 'ci', html: ICON.zap }), 'Mengisi')),
       list.length > 1 && h('div', { class: 'hero-pick' }, list.map((d) => h('button', { class: d === dev ? 'on' : '', onclick: () => { selectedSerial = d.serial; renderDash(); renderGrid(); } }, d.name || d.ip || d.serial)))));
